@@ -1,6 +1,4 @@
 import svgPaths from "./svg-7e4worwhe0";
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { useSidebar } from '@/app/contexts/SidebarContext';
 
 function Breadcrumbs() {
   return (
@@ -58,26 +56,11 @@ function TextInput() {
 }
 
 export default function TopHeader() {
-  const { isSecondaryCollapsed, toggleSecondary } = useSidebar();
-  
   return (
     <div className="bg-[#f9f9f9] content-stretch flex items-center justify-between relative w-full pt-[12px] pr-[32px] pb-[12px] pl-[24px]" data-name="Top Header">
       <div aria-hidden="true" className="absolute border-[rgba(28,28,28,0.11)] border-b border-solid inset-0 pointer-events-none" />
       
       <div className="flex items-center gap-[12px]">
-        {/* Sidebar toggle button */}
-        <button
-          onClick={toggleSecondary}
-          className="p-[8px] rounded-[8px] hover:bg-[rgba(0,0,0,0.05)] transition-colors cursor-pointer"
-          title={isSecondaryCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isSecondaryCollapsed ? (
-            <PanelLeftOpen className="size-[20px] text-[#3a3a3a]" strokeWidth={1.75} />
-          ) : (
-            <PanelLeftClose className="size-[20px] text-[#3a3a3a]" strokeWidth={1.75} />
-          )}
-        </button>
-        
         <Breadcrumbs />
       </div>
       

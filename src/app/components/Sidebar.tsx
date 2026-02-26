@@ -250,8 +250,21 @@ function SecondaryNavigation() {
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onlyMain?: boolean;
+  onlySecondary?: boolean;
+}
+
+export function Sidebar({ onlyMain = false, onlySecondary = false }: SidebarProps = {}) {
   const { isSecondaryCollapsed } = useSidebar();
+  
+  if (onlyMain) {
+    return <MainNavigation />;
+  }
+  
+  if (onlySecondary) {
+    return <SecondaryNavigation />;
+  }
   
   return (
     <div className="flex h-screen">

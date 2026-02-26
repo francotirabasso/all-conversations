@@ -2,6 +2,7 @@ import Frame1000003766 from '@/imports/Frame1000003766';
 import TopHeader from '@/imports/TopHeader';
 import { Sidebar } from './components/Sidebar';
 import { SavedViewsPage } from './components/SavedViewsPage';
+import { FloatingToggleButton } from './components/FloatingToggleButton';
 import { GlobalFiltersProvider, useGlobalFilters } from './contexts/GlobalFiltersContext';
 import { SidebarProvider, useSidebar } from './contexts/SidebarContext';
 
@@ -39,34 +40,46 @@ function LoadingSkeleton() {
 
 function AppContent() {
   const { isLoadingView } = useGlobalFilters();
-  const { currentPage } = useSidebar();
+  const { currentPage, isSecondaryCollapsed } = useSidebar();
   
   return (
-    <div className="flex h-screen w-screen min-w-[720px] overflow-hidden bg-gray-50">
+    <div className="flex h-screen w-screen min-w-[720px] overflow-hidden bg-gray-50 relative">
       {isLoadingView && <LoadingSkeleton />}
       
-      {/* Sidebar */}
-      <div className="flex-shrink-0">
-        <Sidebar />
-      </div>
+      {/* MainNavigation - always on the left */}
+      <Sidebar onlyMain={true} />
       
-      {/* Main Content */}
-      {currentPage === 'all-conversations' && (
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Right side: TopHeader above SecondaryNavigation and main content */}
+      <div className="flex flex-col flex-1 min-h-0 relative">
+        {/* Top Header - spans above SecondaryNavigation and main content */}
+        {currentPage === 'all-conversations' && (
           <div className="flex-shrink-0">
             <TopHeader />
           </div>
-          <div className="flex-1 overflow-auto">
-            <Frame1000003766 />
-          </div>
+        )}
+        
+        {/* Floating toggle button */}
+        <FloatingToggleButton />
+        
+        {/* Bottom area: SecondaryNavigation and main content side by side */}
+        <div className="flex flex-1 min-h-0">
+          {/* SecondaryNavigation */}
+          {!isSecondaryCollapsed && <Sidebar onlySecondary={true} />}
+          
+          {/* Main Content */}
+          {currentPage === 'all-conversations' && (
+            <div className="flex-1 overflow-auto">
+              <Frame1000003766 />
+            </div>
+          )}
+          
+          {currentPage === 'saved-views' && (
+            <div className="flex-1 overflow-auto">
+              <SavedViewsPage />
+            </div>
+          )}
         </div>
-      )}
-      
-      {currentPage === 'saved-views' && (
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-          <SavedViewsPage />
-        </div>
-      )}
+      </div>
     </div>
   );
 }
