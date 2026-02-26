@@ -129,14 +129,6 @@ function SecondaryNavigation() {
 
   return (
     <div className="bg-[#f9f9f9] w-[223px] h-full flex flex-col border-r border-[rgba(28,28,28,0.17)] overflow-y-auto">
-      {/* Office Selector */}
-      <div className="px-[12px] py-[11px] border-b border-[rgba(28,28,28,0.11)] pt-[12px] pr-[12px] pb-[10px] pl-[12px]">
-        <button className="w-full flex items-center justify-between px-[12px] py-[8px] rounded-[8px] hover:bg-[rgba(28,28,28,0.06)] transition-colors">
-          <span className="text-[15px] font-[510] text-[#3a3a3a]">Office 1</span>
-          <ChevronDown className="size-[18px] text-[#3a3a3a]" strokeWidth={1.5} />
-        </button>
-      </div>
-
       {/* Navigation Items */}
       <div className="flex-1 py-[8px]">
         {/* Analytics Ai */}
