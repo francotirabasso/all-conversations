@@ -129,6 +129,11 @@ function SecondaryNavigation() {
 
   return (
     <div className="bg-[#f9f9f9] w-[223px] h-full flex flex-col border-r border-[rgba(28,28,28,0.17)] overflow-y-auto">
+      {/* Title */}
+      <div className="px-[24px] pt-[16px] pb-[8px]">
+        <h2 className="text-[12px] font-[500] text-[#535353] tracking-[0.5px]">ANALYTICS</h2>
+      </div>
+      
       {/* Navigation Items */}
       <div className="flex-1 py-[8px]">
         {/* Analytics Ai */}
