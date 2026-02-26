@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Widget } from './Widget';
 import { ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
 import Container from '../../imports/Container';
@@ -1539,16 +1540,16 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           </button>
         </div>
       </div>
-      
-      {/* Details Popover */}
-      {selectedNodeForDetails && (
+
+      {/* Details Popover - Rendered via Portal to avoid overflow-clip issues */}
+      {selectedNodeForDetails && createPortal(
         <>
           {/* Overlay */}
           <div
             className="fixed inset-0 z-[9998]"
             onClick={() => setSelectedNodeForDetails(null)}
           />
-          
+
           {/* Popover Content */}
           <div
             className="fixed z-[9999]"
@@ -1558,7 +1559,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <Container 
+            <Container
               nodeName={selectedNodeForDetails.nodeName}
               percentage={selectedNodeForDetails.percentage}
               value={selectedNodeForDetails.value}
@@ -1568,7 +1569,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               iconType={['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'abandoned_other_b', 'missed_by_customer_v', 'missed_by_cc_v'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' : 'both'}
             />
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );

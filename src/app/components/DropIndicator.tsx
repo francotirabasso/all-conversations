@@ -10,24 +10,19 @@ interface DropIndicatorProps {
 }
 
 export function DropIndicator({ isValid }: DropIndicatorProps) {
-  const color = isValid ? '#2563eb' : '#ef4444'; // blue vs red
-  const glowColor = isValid 
-    ? 'rgba(37, 99, 235, 0.6)' 
-    : 'rgba(239, 68, 68, 0.6)';
+  console.log('🎨 DropIndicator RENDERING:', { isValid });
+
   const bgClass = isValid
-    ? 'bg-[#2563eb]'
-    : 'bg-[#ef4444]';
+    ? 'bg-[#4AA9EA]'
+    : 'bg-[#D90A45]';
 
   return (
-    <div 
-      className={`w-full ${bgClass} rounded-full pointer-events-none`}
+    <div
+      className={`h-full ${bgClass} rounded-full pointer-events-none`}
       style={{
-        height: '4px',
-        minHeight: '4px',
-        boxShadow: `0 0 8px ${glowColor}`,
+        width: '4px',
+        minWidth: '4px',
         zIndex: 9999,
-        marginTop: '4px',
-        marginBottom: '4px',
       }}
     />
   );

@@ -1,8 +1,9 @@
 import svgPaths from "./svg-gqj26qwe5l";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { Upload, Check, X, RectangleHorizontal, ChartLine, Flame, Option, Table2, ChevronDown as ChevronDownIcon, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import * as Checkbox from "@radix-ui/react-checkbox";
+import { useDraggable } from '@dnd-kit/core';
 import { useGlobalFilters } from "@/app/contexts/GlobalFiltersContext";
 import { useSidebar } from "@/app/contexts/SidebarContext";
 import { getUniqueOffices, getUniqueContactCenters, getContactCentersByOffices, getUniqueAgents } from "@/app/utils/csvDataProcessor";
@@ -34,6 +35,76 @@ const AVAILABLE_WIDGETS = [
   { id: 'conversation-breakdown', name: 'Conversation volume breakdown', type: 'sankey' },
   { id: 'leaderboard', name: 'Leaderboard', type: 'table' },
 ];
+
+// Library widget item component with drag support
+interface LibraryWidgetItemProps {
+  widgetId: string;
+  widgetType: string;
+  name: string;
+  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  onClickAdd: () => void;
+  onDragStart?: () => void;
+}
+
+function LibraryWidgetItem({ widgetId, widgetType, name, Icon, onClickAdd, onDragStart }: LibraryWidgetItemProps) {
+  // Only make implemented widgets draggable
+  // Note: These IDs must match AVAILABLE_WIDGETS IDs, not the internal implementation IDs
+  const IMPLEMENTED_WIDGETS = new Set([
+    'avg-answer-time', 'avg-handle-time', 'avg-first-response',
+    'transfer-rate', 'deflection-rate', 'conversation-volume-time', 'conversation-breakdown', 'weekly-average'
+  ]);
+
+  const isDraggableWidget = IMPLEMENTED_WIDGETS.has(widgetId);
+
+  const draggableData = useMemo(() => {
+    const data = {
+      type: 'library-item',
+      widgetId: widgetId,
+      widgetType: widgetType,
+    };
+    console.log('📦 LibraryWidgetItem data:', { widgetId, isDraggableWidget, data });
+    return data;
+  }, [widgetId, widgetType, isDraggableWidget]);
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `library-${widgetId}`,
+    data: draggableData,
+    disabled: !isDraggableWidget,
+  });
+
+  console.log('🎯 useDraggable result:', { widgetId, isDragging, disabled: !isDraggableWidget });
+
+  // Close popover when drag starts
+  useEffect(() => {
+    if (isDragging && onDragStart) {
+      onDragStart();
+    }
+  }, [isDragging, onDragStart]);
+
+  return (
+    <div
+      ref={isDraggableWidget ? setNodeRef : undefined}
+      {...(isDraggableWidget ? listeners : {})}
+      {...(isDraggableWidget ? attributes : {})}
+      className={`group flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+        isDraggableWidget ? 'cursor-grab active:cursor-grabbing' : ''
+      } ${isDragging ? 'opacity-50' : ''}`}
+    >
+      <Icon className="size-4 shrink-0" style={{ color: '#6EA6E2' }} />
+      <span className="text-sm font-normal text-gray-700 flex-1">{name}</span>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onClickAdd();
+        }}
+        className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs text-[#7C52FF] hover:text-[#6B45E6] bg-transparent rounded cursor-pointer"
+      >
+        Add widget
+      </button>
+    </div>
+  );
+}
 
 function Content({ onEditingChange }: { onEditingChange: (isEditing: boolean) => void }) {
   const { currentViewName, setCurrentViewName, currentViewId, updateViewName } = useGlobalFilters();
@@ -257,7 +328,7 @@ function Button({ isTitleEditing }: { isTitleEditing: boolean }) {
               placeholder="Search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-9 pr-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)] focus:border-transparent"
             />
           </div>
           
@@ -336,10 +407,10 @@ function Container({ getWidgetOrder }: { getWidgetOrder?: () => any }) {
     ? originalView.widgetFilters 
     : {};
   
-  const originalHasWidgetFilters = originalView 
-    ? originalView.hasWidgetFilters 
+  const originalHasWidgetFilters = originalView
+    ? originalView.hasWidgetFilters
     : false;
-  
+
   // Helper function to deeply compare two objects
   const areObjectsEqual = (obj1: any, obj2: any): boolean => {
     // If both are the same reference or both are null/undefined
@@ -393,9 +464,9 @@ function Container({ getWidgetOrder }: { getWidgetOrder?: () => any }) {
   console.log('[Modified Pill Debug] Are widget filters equal?', widgetFiltersEqual);
   console.log('[Modified Pill Debug] Number of current widgets:', Object.keys(widgetFilters).length);
   console.log('[Modified Pill Debug] Number of original widgets:', Object.keys(originalWidgetFilters).length);
-  
+
   // Check if current filters are different from the original view
-  const hasFiltersModified = 
+  const hasFiltersModified =
     filters.offices.length !== originalFilters.offices.length ||
     filters.contactCenters.length !== originalFilters.contactCenters.length ||
     filters.agents.length !== originalFilters.agents.length ||
@@ -632,7 +703,7 @@ function Button1({ onAddWidget }: { onAddWidget: (widgetId: string, widgetType: 
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+    <Popover.Root open={isOpen} onOpenChange={setIsOpen} modal={false}>
       <Popover.Trigger asChild>
         <button className="bg-[rgba(0,0,0,0)] content-stretch flex items-center justify-center px-[6px] py-[8px] relative rounded-[8px] shrink-0 cursor-pointer hover:bg-[rgba(0,0,0,0.05)] transition-colors" data-name="Button">
           <div aria-hidden="true" className="absolute border border-[rgba(28,28,28,0.17)] border-solid inset-0 pointer-events-none rounded-[8px]" />
@@ -654,14 +725,14 @@ function Button1({ onAddWidget }: { onAddWidget: (widgetId: string, widgetType: 
               placeholder="Search widgets"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
             />
             
             <div className="relative">
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white pr-8"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)] appearance-none bg-white pr-8"
               >
                 <option value="all">Type</option>
                 {WIDGET_TYPES.map(type => (
@@ -683,27 +754,20 @@ function Button1({ onAddWidget }: { onAddWidget: (widgetId: string, widgetType: 
               .map(widget => {
                 const typeConfig = WIDGET_TYPES.find(t => t.id === widget.type);
                 const Icon = typeConfig?.icon || RectangleHorizontal;
-                
+
                 return (
-                  <div
+                  <LibraryWidgetItem
                     key={widget.id}
-                    className="group flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
-                  >
-                    <Icon className="size-4 shrink-0" style={{ color: '#6EA6E2' }} />
-                    
-                    <span className="text-sm font-normal text-gray-700 flex-1">{widget.name}</span>
-                    
-                    {/* Add widget button - appears on hover */}
-                    <button
-                      onClick={() => {
-                        onAddWidget(widget.id, widget.type);
-                        setIsOpen(false);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs text-[#7C52FF] hover:text-[#6B45E6] bg-transparent rounded cursor-pointer"
-                    >
-                      Add widget
-                    </button>
-                  </div>
+                    widgetId={widget.id}
+                    widgetType={widget.type}
+                    name={widget.name}
+                    Icon={Icon}
+                    onClickAdd={() => {
+                      onAddWidget(widget.id, widget.type);
+                      setIsOpen(false);
+                    }}
+                    onDragStart={() => setIsOpen(false)}
+                  />
                 );
               })}
           </div>
@@ -1075,7 +1139,7 @@ function Frame1({ onAddWidget, getWidgetOrder }: {
   );
 }
 
-function MainTitle({ onAddWidget, getWidgetOrder }: { 
+function MainTitle({ onAddWidget, getWidgetOrder }: {
   onAddWidget: (widgetId: string, widgetType: string) => void;
   getWidgetOrder?: () => any;
 }) {
@@ -1089,7 +1153,7 @@ function MainTitle({ onAddWidget, getWidgetOrder }: {
   );
 }
 
-function Header({ onAddWidget, getWidgetOrder }: { 
+function Header({ onAddWidget, getWidgetOrder }: {
   onAddWidget: (widgetId: string, widgetType: string) => void;
   getWidgetOrder?: () => any;
 }) {
@@ -1608,7 +1672,7 @@ function AllMembersFilter() {
               placeholder="Search agents..."
               value={agentSearch}
               onChange={(e) => setAgentSearch(e.target.value)}
-              className="w-full px-3 py-1.5 text-[12px] border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-3 py-1.5 text-[12px] border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[rgb(23,104,198)]"
             />
             <div className="max-h-[280px] overflow-y-auto space-y-1.5">
               {filteredAgents.map(agent => (
@@ -1628,10 +1692,7 @@ function AllMembersFilter() {
                       <Check className="size-3 text-white" strokeWidth={3} />
                     </Checkbox.Indicator>
                   </Checkbox.Root>
-                  <div className="flex flex-col">
-                    <span className="text-[12px] text-gray-700">{agent.name}</span>
-                    <span className="text-[10px] text-gray-500">{agent.type}</span>
-                  </div>
+                  <span className="text-[12px] text-gray-700">{agent.name}</span>
                 </label>
               ))}
             </div>
@@ -1798,7 +1859,7 @@ function FilterCustomizeContainer() {
   );
 }
 
-export default function PageHeader({ onAddWidget, getWidgetOrder }: { 
+export default function PageHeader({ onAddWidget, getWidgetOrder }: {
   onAddWidget: (widgetId: string, widgetType: string) => void;
   getWidgetOrder?: () => any;
 }) {

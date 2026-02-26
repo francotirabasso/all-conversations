@@ -15,7 +15,7 @@ import svgPaths from '../../imports/svg-uoglwwvkom';
 import svgPathsAiNotes from '../../imports/svg-rqs6u8vuff';
 import svgPathsDialpadStar from '../../imports/svg-gfstlbjct3';
 import DialpadLogo from '../../imports/DialpadLogo';
-import imgPic from 'figma:asset/76274627fd447d4009110cb8d0e70426b2e88508.png';
+// import imgPic from 'figma:asset/76274627fd447d4009110cb8d0e70426b2e88508.png'; // Asset not available
 import { useSidebar } from '../contexts/SidebarContext';
 
 function AiNotesIcon() {
@@ -90,8 +90,8 @@ function MainNavigation() {
         <NavIcon icon={<DialpadStarIcon />} />
         <NavIcon icon={<Video className="size-[20px]" strokeWidth={1.75} />} />
         <NavIcon icon={<HelpCircle className="size-[20px]" strokeWidth={1.75} />} />
-        <div className="relative rounded-[50px] shrink-0 size-[32px] overflow-hidden">
-          <img alt="User avatar" className="w-full h-full object-cover" src={imgPic} />
+        <div className="relative rounded-[50px] shrink-0 size-[32px] overflow-hidden bg-purple-500 flex items-center justify-center">
+          <User className="size-[18px] text-white" />
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import * as d3 from 'd3';
 
 interface DataPoint {
@@ -385,64 +386,65 @@ export function LineChart({
         onMouseLeave={() => setTooltipData(null)}
       >
         <svg ref={svgRef} className="w-full h-full" />
-        
-        {/* Tooltip */}
-        {tooltipData && (
-          <div
-            className="fixed bg-white rounded-lg shadow-lg border border-gray-200 p-3 pointer-events-none z-50"
-            style={{
-              left: tooltipData.showLeft ? `${tooltipData.x - 360}px` : `${tooltipData.x + 10}px`,
-              top: `${tooltipData.y}px`,
-              transform: 'translateY(-50%)'
-            }}
-          >
-            <div className="text-[11px] text-gray-500 mb-2">
-              {d3.timeFormat('%b %-d, %Y')(tooltipData.date)}
-            </div>
-            
-            {/* Header row */}
-            <div className="grid grid-cols-[1fr_auto_50px_50px] gap-3 pb-1 mb-1 border-b border-gray-200">
-              <div></div>
-              <div></div>
-              <div className="text-[10px] text-gray-500 font-medium text-right">Voice</div>
-              <div className="text-[10px] text-gray-500 font-medium text-right">Digital</div>
-            </div>
-            
-            {/* Data rows */}
-            <div className="space-y-0.5">
-              {staticTooltipData.map((item, index) => (
-                <div 
-                  key={`${item.name}-${index}`}
-                  className="grid grid-cols-[1fr_auto_50px_50px] gap-3 items-center"
-                  style={{ paddingLeft: item.isParent ? '0' : '16px' }}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {item.color && (
-                      <div 
-                        className="w-2 h-2 rounded-full shrink-0" 
-                        style={{ backgroundColor: item.color }}
-                      />
-                    )}
-                    {!item.color && <div className="w-2 shrink-0" />}
-                    <span className={`text-[11px] ${item.isParent ? 'font-medium text-gray-900' : 'text-gray-600'} truncate`}>
-                      {item.name}
-                    </span>
-                  </div>
-                  <span className={`text-[11px] ${item.isParent ? 'font-medium' : 'font-normal'} text-gray-900 text-right`}>
-                    {item.value}
-                  </span>
-                  <span className="text-[11px] text-gray-600 text-right">
-                    {item.voicePercent}%
-                  </span>
-                  <span className="text-[11px] text-gray-600 text-right">
-                    {item.digitalPercent}%
+      </div>
+
+      {/* Tooltip rendered via Portal to avoid overflow-clip issues */}
+      {tooltipData && createPortal(
+        <div
+          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 p-3 pointer-events-none z-[10000]"
+          style={{
+            left: tooltipData.showLeft ? `${tooltipData.x - 360}px` : `${tooltipData.x + 10}px`,
+            top: `${tooltipData.y}px`,
+            transform: 'translateY(-50%)'
+          }}
+        >
+          <div className="text-[11px] text-gray-500 mb-2">
+            {d3.timeFormat('%b %-d, %Y')(tooltipData.date)}
+          </div>
+
+          {/* Header row */}
+          <div className="grid grid-cols-[1fr_auto_50px_50px] gap-3 pb-1 mb-1 border-b border-gray-200">
+            <div></div>
+            <div></div>
+            <div className="text-[10px] text-gray-500 font-medium text-right">Voice</div>
+            <div className="text-[10px] text-gray-500 font-medium text-right">Digital</div>
+          </div>
+
+          {/* Data rows */}
+          <div className="space-y-0.5">
+            {staticTooltipData.map((item, index) => (
+              <div
+                key={`${item.name}-${index}`}
+                className="grid grid-cols-[1fr_auto_50px_50px] gap-3 items-center"
+                style={{ paddingLeft: item.isParent ? '0' : '16px' }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {item.color && (
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                  )}
+                  {!item.color && <div className="w-2 shrink-0" />}
+                  <span className={`text-[11px] ${item.isParent ? 'font-medium text-gray-900' : 'text-gray-600'} truncate`}>
+                    {item.name}
                   </span>
                 </div>
-              ))}
-            </div>
+                <span className={`text-[11px] ${item.isParent ? 'font-medium' : 'font-normal'} text-gray-900 text-right`}>
+                  {item.value}
+                </span>
+                <span className="text-[11px] text-gray-600 text-right">
+                  {item.voicePercent}%
+                </span>
+                <span className="text-[11px] text-gray-600 text-right">
+                  {item.digitalPercent}%
+                </span>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </div>,
+        document.body
+      )}
 
       {/* Leyenda */}
       <div className="px-4 pb-[16px] flex flex-wrap gap-x-4 gap-y-2 pt-[0px] pr-[16px] pl-[24px]">

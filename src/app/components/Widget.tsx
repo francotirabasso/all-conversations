@@ -10,6 +10,7 @@ import { ClearFilterButton } from "./ClearFilterButton";
 import { useGlobalFilters } from "../contexts/GlobalFiltersContext";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { getUniqueAgents } from "../utils/csvDataProcessor";
 
 // Grip icon component
 function Grip() {
@@ -314,6 +315,8 @@ export function Widget({
 
   const [officeSearch, setOfficeSearch] = useState("");
   const [groupSearch, setGroupSearch] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [members, setMembers] = useState<Array<{ name: string; type: string }>>([]);
 
   const mockOffices = [
     "?|?/|\\test-vivek/&^*!@",
@@ -339,15 +342,14 @@ export function Widget({
     "Group Epsilon",
   ];
 
-  const mockMembers = [
-    "Alice Johnson",
-    "Bob Smith",
-    "Carol Williams",
-    "David Brown",
-    "Emma Davis",
-    "Frank Miller",
-    "Grace Wilson",
-  ];
+  // Load members from CSV
+  useEffect(() => {
+    const loadMembers = async () => {
+      const loadedMembers = await getUniqueAgents();
+      setMembers(loadedMembers);
+    };
+    loadMembers();
+  }, []);
 
   const filteredOffices = mockOffices.filter(office =>
     office.toLowerCase().includes(officeSearch.toLowerCase())
@@ -355,6 +357,10 @@ export function Widget({
 
   const filteredGroups = mockGroups.filter(group =>
     group.toLowerCase().includes(groupSearch.toLowerCase())
+  );
+
+  const filteredMembers = members.filter(member =>
+    member.name.toLowerCase().includes(memberSearch.toLowerCase())
   );
 
   // Load filters from context when widget mounts or widgetFilters changes
@@ -804,7 +810,7 @@ export function Widget({
                                           placeholder="Search offices..."
                                           value={officeSearch}
                                           onChange={(e) => setOfficeSearch(e.target.value)}
-                                          className="w-full px-3 py-1.5 text-[12px] border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
+                                          className="w-full px-3 py-1.5 text-[12px] border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[rgb(23,104,198)] mb-2"
                                         />
                                         <div className="max-h-[120px] overflow-y-auto space-y-1.5">
                                           {filteredOffices.map(office => (
@@ -850,7 +856,7 @@ export function Widget({
                                           placeholder="Search groups..."
                                           value={groupSearch}
                                           onChange={(e) => setGroupSearch(e.target.value)}
-                                          className="w-full px-3 py-1.5 text-[12px] border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 mb-2"
+                                          className="w-full px-3 py-1.5 text-[12px] border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[rgb(23,104,198)] mb-2"
                                         />
                                         <div className="max-h-[120px] overflow-y-auto space-y-1.5">
                                           {filteredGroups.map(group => (
@@ -924,33 +930,42 @@ export function Widget({
                                     </Accordion.Trigger>
                                   </Accordion.Header>
                                   <Accordion.Content className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                                    <div className="px-4 pb-4 space-y-2">
-                                      {mockMembers.map(member => (
-                                        <label key={member} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                          <Checkbox.Root
-                                            checked={filters.members.includes(member)}
-                                            onCheckedChange={(checked) => {
-                                              if (checked) {
-                                                setFilters({
-                                                  ...filters,
-                                                  members: [...filters.members, member],
-                                                });
-                                              } else {
-                                                setFilters({
-                                                  ...filters,
-                                                  members: filters.members.filter(m => m !== member),
-                                                });
-                                              }
-                                            }}
-                                            className="flex size-4 items-center justify-center rounded border-2 border-gray-300 data-[state=checked]:bg-[rgb(23,104,198)] data-[state=checked]:border-[rgb(23,104,198)]"
-                                          >
-                                            <Checkbox.Indicator>
-                                              <Check className="size-3 text-white" strokeWidth={3} />
-                                            </Checkbox.Indicator>
-                                          </Checkbox.Root>
-                                          <span className="text-[12px] text-gray-700">{member}</span>
-                                        </label>
-                                      ))}
+                                    <div className="px-4 pb-4">
+                                      <input
+                                        type="text"
+                                        placeholder="Search members..."
+                                        value={memberSearch}
+                                        onChange={(e) => setMemberSearch(e.target.value)}
+                                        className="w-full px-3 py-1.5 text-[12px] border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-[rgb(23,104,198)] mb-2"
+                                      />
+                                      <div className="max-h-[120px] overflow-y-auto space-y-1.5">
+                                        {filteredMembers.map(member => (
+                                          <label key={member.name} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                            <Checkbox.Root
+                                              checked={filters.members.includes(member.name)}
+                                              onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                  setFilters({
+                                                    ...filters,
+                                                    members: [...filters.members, member.name],
+                                                  });
+                                                } else {
+                                                  setFilters({
+                                                    ...filters,
+                                                    members: filters.members.filter(m => m !== member.name),
+                                                  });
+                                                }
+                                              }}
+                                              className="flex size-4 items-center justify-center rounded border-2 border-gray-300 data-[state=checked]:bg-[rgb(23,104,198)] data-[state=checked]:border-[rgb(23,104,198)]"
+                                            >
+                                              <Checkbox.Indicator>
+                                                <Check className="size-3 text-white" strokeWidth={3} />
+                                              </Checkbox.Indicator>
+                                            </Checkbox.Root>
+                                            <span className="text-[12px] text-gray-700">{member.name}</span>
+                                          </label>
+                                        ))}
+                                      </div>
                                     </div>
                                   </Accordion.Content>
                                 </Accordion.Item>

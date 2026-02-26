@@ -456,7 +456,7 @@ export function MenuWithDot({ onFiltersChange }: { onFiltersChange: (count: numb
                           placeholder="Search offices..."
                           value={officeSearch}
                           onChange={(e) => setOfficeSearch(e.target.value)}
-                          className="w-full px-3 py-2 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                         />
                       </div>
                       <div className="max-h-[150px] overflow-y-auto border border-gray-200 rounded-lg">
@@ -509,7 +509,7 @@ export function MenuWithDot({ onFiltersChange }: { onFiltersChange: (count: numb
                           placeholder="Search groups..."
                           value={groupSearch}
                           onChange={(e) => setGroupSearch(e.target.value)}
-                          className="w-full px-3 py-2 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                         />
                       </div>
                       <div className="max-h-[150px] overflow-y-auto border border-gray-200 rounded-lg">
@@ -585,7 +585,7 @@ export function MenuWithDot({ onFiltersChange }: { onFiltersChange: (count: numb
                     <select
                       value={filters.dateRange}
                       onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                      className="w-full px-3 py-2 pr-8 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 pr-8 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     >
                       <option>Past 7 days</option>
                       <option>Past 30 days</option>
@@ -937,7 +937,7 @@ export function MenuWithDot({ onFiltersChange }: { onFiltersChange: (count: numb
                       placeholder="Enter keyword..."
                       value={filters.keyword}
                       onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
-                      className="w-full px-3 py-2 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-[12px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     />
                   </div>
                 </Accordion.Content>

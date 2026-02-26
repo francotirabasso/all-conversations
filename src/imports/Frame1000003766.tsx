@@ -1,6 +1,6 @@
 import svgPaths from "./svg-0rxmv7ldfh";
-import imgChart from "figma:asset/45fe613bd972f75d91e566b3f52ce1a9b43c3055.png";
-import React, { useState, useEffect, useCallback } from "react";
+// import imgChart from "figma:asset/45fe613bd972f75d91e566b3f52ce1a9b43c3055.png"; // Figma asset not available
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import * as Checkbox from "@radix-ui/react-checkbox";
 import * as Accordion from "@radix-ui/react-accordion";
@@ -20,12 +20,15 @@ import { processHeatmapData, generateMockHeatmapData } from "@/app/utils/heatmap
 import { WidgetModal } from "@/app/components/WidgetModal";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { useWidgetOrder } from "@/app/hooks/useWidgetOrder";
+import { useWidgetOrder, type Section } from "@/app/hooks/useWidgetOrder";
 import { useBreakpoint } from "@/app/hooks/useBreakpoint";
 import { getWidgetWeight, calculateSectionWeight, canAddToSection } from "@/app/config/widgetWeights";
-import { calculateGridColumns } from "@/app/utils/gridCalculator";
+import { calculateGridColumns, getWidgetColumnSpan } from "@/app/utils/gridCalculator";
 import { DropIndicator } from "@/app/components/DropIndicator";
+import { HorizontalDropIndicator } from "@/app/components/HorizontalDropIndicator";
+import { SectionBoundary } from "@/app/components/SectionBoundary";
 import { SortableWidget } from "@/app/components/SortableWidget";
+import { DynamicSection } from "@/app/components/DynamicSection";
 
 // Global styles for checkbox, input focus colors, and scrollbars
 const styleEl = document.createElement('style');
@@ -599,7 +602,7 @@ function Menu({ onFiltersChange }: { onFiltersChange: (count: number) => void })
                         value={officeSearch}
                         onChange={(e) => setOfficeSearch(e.target.value)}
                         placeholder="Search offices..."
-                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                       />
                       <div className="mt-2 max-h-[100px] overflow-y-auto">
                         {filteredOffices.map((office) => (
@@ -647,7 +650,7 @@ function Menu({ onFiltersChange }: { onFiltersChange: (count: number) => void })
                         value={groupSearch}
                         onChange={(e) => setGroupSearch(e.target.value)}
                         placeholder="Search groups..."
-                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                       />
                       <div className="mt-2 max-h-[100px] overflow-y-auto">
                         {filteredGroups.length === 0 ? (
@@ -731,7 +734,7 @@ function Menu({ onFiltersChange }: { onFiltersChange: (count: number) => void })
                     <select
                       value={filters.dateRange}
                       onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     >
                       <option>Today</option>
                       <option>Yesterday</option>
@@ -781,7 +784,7 @@ function Menu({ onFiltersChange }: { onFiltersChange: (count: number) => void })
                     <select
                       value={filters.aiAgent}
                       onChange={(e) => setFilters({ ...filters, aiAgent: e.target.value })}
-                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     >
                       <option>All agents</option>
                       <option>Agent 1</option>
@@ -932,8 +935,8 @@ function Menu({ onFiltersChange }: { onFiltersChange: (count: number) => void })
                       <Slider.Track className="relative h-2 w-full rounded-full bg-gray-200">
                         <Slider.Range className="absolute h-full rounded-full bg-blue-500" />
                       </Slider.Track>
-                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
-                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
+                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)] focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
+                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)] focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
                     </Slider.Root>
                     <div className="mt-3 flex justify-between text-[11px] text-gray-600 font-['SF_Pro:Medium',sans-serif]">
                       <span>{getDurationLabel(filters.durationRange[0])}</span>
@@ -979,7 +982,7 @@ function Menu({ onFiltersChange }: { onFiltersChange: (count: number) => void })
                       value={filters.keyword}
                       onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
                       placeholder="Search by keyword..."
-                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     />
                   </div>
                 </Accordion.Content>
@@ -1049,7 +1052,7 @@ function Menu({ onFiltersChange }: { onFiltersChange: (count: number) => void })
                     <input
                       type="text"
                       placeholder="Add tags..."
-                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     />
                   </div>
                 </Accordion.Content>
@@ -1694,7 +1697,7 @@ function MenuWithBadge({ onFiltersChange }: { onFiltersChange: (count: number) =
                         value={officeSearch}
                         onChange={(e) => setOfficeSearch(e.target.value)}
                         placeholder="Search offices..."
-                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                       />
                       <div className="mt-2 max-h-[100px] overflow-y-auto">
                         {filteredOffices.map((office) => (
@@ -1742,7 +1745,7 @@ function MenuWithBadge({ onFiltersChange }: { onFiltersChange: (count: number) =
                         value={groupSearch}
                         onChange={(e) => setGroupSearch(e.target.value)}
                         placeholder="Search groups..."
-                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                       />
                       <div className="mt-2 max-h-[100px] overflow-y-auto">
                         {filteredGroups.length === 0 ? (
@@ -1823,7 +1826,7 @@ function MenuWithBadge({ onFiltersChange }: { onFiltersChange: (count: number) =
                     <select
                       value={filters.dateRange}
                       onChange={(e) => setFilters({ ...filters, dateRange: e.target.value })}
-                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     >
                       <option>Today</option>
                       <option>Yesterday</option>
@@ -1870,7 +1873,7 @@ function MenuWithBadge({ onFiltersChange }: { onFiltersChange: (count: number) =
                     <select
                       value={filters.aiAgent}
                       onChange={(e) => setFilters({ ...filters, aiAgent: e.target.value })}
-                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 pr-8 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     >
                       <option>All agents</option>
                       <option>Agent 1</option>
@@ -2012,8 +2015,8 @@ function MenuWithBadge({ onFiltersChange }: { onFiltersChange: (count: number) =
                       <Slider.Track className="relative h-2 w-full rounded-full bg-gray-200">
                         <Slider.Range className="absolute h-full rounded-full bg-blue-500" />
                       </Slider.Track>
-                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
-                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
+                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)] focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
+                      <Slider.Thumb className="block h-5 w-5 rounded-full bg-white border-2 border-blue-500 shadow focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)] focus:ring-offset-2 cursor-grab active:cursor-grabbing" />
                     </Slider.Root>
                     <div className="mt-3 flex justify-between text-[11px] text-gray-600 font-['SF_Pro:Medium',sans-serif]">
                       <span>{getDurationLabel(filters.durationRange[0])}</span>
@@ -2056,7 +2059,7 @@ function MenuWithBadge({ onFiltersChange }: { onFiltersChange: (count: number) =
                       value={filters.keyword}
                       onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
                       placeholder="Search by keyword..."
-                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     />
                   </div>
                 </Accordion.Content>
@@ -2120,7 +2123,7 @@ function MenuWithBadge({ onFiltersChange }: { onFiltersChange: (count: number) =
                     <input
                       type="text"
                       placeholder="Add tags..."
-                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-[12px] border border-[rgba(28,28,28,0.2)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
                     />
                   </div>
                 </Accordion.Content>
@@ -2450,7 +2453,7 @@ function YAxis() {
 
 function Chart1() {
   return (
-    <div className="bg-size-[559px_149px] bg-top-left flex-[1_0_0] h-full min-h-px min-w-px relative" data-name="Chart" style={{ backgroundImage: `url('${imgChart}')` }}>
+    <div className="bg-size-[559px_149px] bg-top-left flex-[1_0_0] h-full min-h-px min-w-px relative" data-name="Chart" style={{ background: 'linear-gradient(to bottom, #f9fafb, #ffffff)' }}>
       <div className="content-stretch flex flex-col items-end overflow-clip relative rounded-[inherit] size-full">
         <YAxis />
       </div>
@@ -2859,105 +2862,105 @@ export default function Frame2() {
   const [removedWidgets, setRemovedWidgets] = useState<Set<string>>(new Set());
 
   // Hook para manejar el orden de widgets con persistencia
-  const { widgetOrder, updateSectionOrder, resetOrder, getCurrentOrder, moveWidgetBetweenSections, getWidgetSection } = useWidgetOrder(currentViewId);
-  
-  // Destructure para facilitar el acceso
-  const { statWidgetsOrder, section2Order, section3Order, section4Order } = widgetOrder;
+  const { widgetOrder, setWidgetOrder, updateSectionOrder, resetOrder, getCurrentOrder, moveWidgetBetweenSections, getWidgetSection, createSection } = useWidgetOrder(currentViewId);
 
   // Hook para detectar breakpoint y MAX_FR_UNITS
   const { maxFrUnits } = useBreakpoint();
 
-  // Estado para el indicador de drop (línea azul/roja)
+  // Estado para el indicador de drop (línea azul/roja) - ahora usa sectionId
   const [dropIndicator, setDropIndicator] = useState<{
-    section: 'statWidgets' | 'section2' | 'section3' | 'section4' | null;
+    sectionId: string;
     index: number;
+    isValid: boolean;
+  } | null>(null);
+
+  // Estado para el indicador de section boundary (horizontal)
+  const [sectionBoundaryIndicator, setSectionBoundaryIndicator] = useState<{
+    position: number;
     isValid: boolean;
   } | null>(null);
 
   // Estado para el widget que se está arrastrando (para DragOverlay)
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  // Calculate dynamic grid columns for each section
-  const section1Grid = calculateGridColumns(statWidgetsOrder.filter(id => !removedWidgets.has(id)));
-  const section2Grid = calculateGridColumns(section2Order.filter(id => !removedWidgets.has(id)));
-  const section3Grid = calculateGridColumns(section3Order.filter(id => !removedWidgets.has(id)));
-  const section4Grid = calculateGridColumns(section4Order.filter(id => !removedWidgets.has(id)));
-  
+  // Estado para detectar si se está arrastrando desde la biblioteca
+  const [draggingFromLibrary, setDraggingFromLibrary] = useState(false);
+
+  // Dynamic refs for section containers (to observe width for responsive spans)
+  const sectionRefs = useRef<Record<string, React.RefObject<HTMLDivElement>>>({});
+
+  // Ensure refs exist for all sections
+  widgetOrder.sections.forEach(section => {
+    if (!sectionRefs.current[section.id]) {
+      sectionRefs.current[section.id] = React.createRef<HTMLDivElement>();
+    }
+  });
+
   // Debug: Log widget order state
   useEffect(() => {
     console.log('📦 Full Widget Order State:', {
-      statWidgetsOrder,
-      section2Order,
-      section3Order,
-      section4Order,
+      sections: widgetOrder.sections,
       maxFrUnits
     });
-  }, [statWidgetsOrder, section2Order, section3Order, section4Order, maxFrUnits]);
+  }, [widgetOrder, maxFrUnits]);
 
-  // Get FR units for a specific widget
+  // Get FR units for a specific widget - use centralized weight configuration
+  // Helper function to extract base widget ID from unique ID
+  const getBaseWidgetId = (widgetId: string): string => {
+    // Extract base widget ID from unique ID (e.g., 'avg-answer-time__1234567890' → 'avg-answer-time')
+    return widgetId.split('__')[0];
+  };
+
   const getWidgetFrUnits = useCallback((widgetId: string): number => {
-    // StatWidgets = 1 FR unit each
-    if (['avg-answer-time', 'avg-handle-time', 'avg-first-response-time', 'transfer-rate', 'deflection-rate'].includes(widgetId)) {
-      return 1;
-    }
-    // ConversationVolume = 6 FR units
-    if (widgetId === 'conversation-volume') {
-      return 6;
-    }
-    // Sankey = 12 FR units (full width)
-    if (widgetId === 'sankey') {
-      return 12;
-    }
-    // Heatmap = 12 FR units (full width)
-    if (widgetId === 'heatmap') {
-      return 12;
-    }
-    return 1; // Default to 1 for unknown widgets
+    const baseWidgetId = getBaseWidgetId(widgetId);
+    return getWidgetWeight(baseWidgetId);
   }, []);
 
   // Calculate used FR units in a section (excluding the widget being dragged)
-  const calculateUsedUnits = useCallback((sectionKey: string, excludeWidgetId?: string): number => {
-    const sectionOrder = widgetOrder[sectionKey] || [];
-    const activeWidgets = sectionOrder.filter(id => !removedWidgets.has(id));
+  const calculateUsedUnits = useCallback((sectionId: string, excludeWidgetId?: string): number => {
+    const section = widgetOrder.sections.find(s => s.id === sectionId);
+    if (!section) return 0;
+
+    const activeWidgets = section.widgetIds.filter(id => !removedWidgets.has(id));
     const filteredWidgets = excludeWidgetId ? activeWidgets.filter(id => id !== excludeWidgetId) : activeWidgets;
     const total = filteredWidgets.reduce((total, widgetId) => total + getWidgetFrUnits(widgetId), 0);
-    
+
     console.log('🧮 calculateUsedUnits:', {
-      sectionKey,
+      sectionId,
       excludeWidgetId,
-      sectionOrder,
+      widgetIds: section.widgetIds,
       activeWidgets,
       filteredWidgets,
       total
     });
-    
+
     return total;
   }, [widgetOrder, removedWidgets, getWidgetFrUnits]);
 
   // Check if a widget can be dropped in a section
-  const canDropInSection = useCallback((widgetId: string, targetSection: string, sourceSection?: string): boolean => {
+  const canDropInSection = useCallback((widgetId: string, targetSectionId: string, sourceSectionId?: string): boolean => {
     const widgetUnits = getWidgetFrUnits(widgetId);
-    
+
     // If moving within the same section, it's always valid (just reordering)
-    if (sourceSection === targetSection) {
+    if (sourceSectionId === targetSectionId) {
       return true;
     }
-    
+
     // Calculate available space in target section (don't exclude the widget since it's not there yet)
-    const usedUnits = calculateUsedUnits(targetSection);
+    const usedUnits = calculateUsedUnits(targetSectionId);
     const availableUnits = maxFrUnits - usedUnits;
-    
+
     console.log('🔍 Validation:', {
       widget: widgetId,
       widgetUnits,
-      targetSection,
-      sourceSection,
+      targetSectionId,
+      sourceSectionId,
       usedUnits,
       availableUnits,
       maxFrUnits,
       canFit: widgetUnits <= availableUnits
     });
-    
+
     return widgetUnits <= availableUnits;
   }, [getWidgetFrUnits, calculateUsedUnits, maxFrUnits]);
 
@@ -2974,13 +2977,22 @@ export default function Frame2() {
   );
 
   // Helper to check if drop indicator should show at this position
-  const shouldShowIndicator = useCallback((section: string, index: number) => {
-    return dropIndicator?.section === section && dropIndicator?.index === index;
+  const shouldShowIndicator = useCallback((sectionId: string, index: number) => {
+    return dropIndicator?.sectionId === sectionId && dropIndicator?.index === index;
   }, [dropIndicator]);
 
   // Handler for drag start - track active widget
   const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const { active } = event;
+
+    // Check if dragging from library
+    if (active.data.current?.type === 'library-item') {
+      setActiveId(`library-${active.data.current.widgetId}`);
+      setDraggingFromLibrary(true);
+    } else {
+      setActiveId(event.active.id as string);
+      setDraggingFromLibrary(false);
+    }
   }, []);
 
   // Handler for drag over - show drop indicator without moving widgets
@@ -2989,20 +3001,39 @@ export default function Frame2() {
 
     if (!over || active.id === over.id) {
       setDropIndicator(null);
+      setSectionBoundaryIndicator(null);
       return;
     }
 
-    const activeId = active.id as string;
+    // Extract actual widget ID for library items
+    const activeId = active.data.current?.type === 'library-item'
+      ? active.data.current.widgetId
+      : (active.id as string);
+
     const overId = over.id as string;
 
-    console.log('🔄 DragOver:', { activeId, overId });
+    console.log('🔄 DragOver:', { activeId, overId, isLibraryItem: active.data.current?.type === 'library-item' });
 
-    // Find which section the active widget belongs to
-    const activeSection = getWidgetSection(activeId);
-    if (!activeSection) {
-      console.warn('❌ Active section not found for:', activeId);
+    // Check if over section boundary
+    if (typeof overId === 'string' && overId.startsWith('section-boundary-')) {
+      const boundaryPosition = parseInt(overId.split('-')[2]);
+      const widgetUnits = getWidgetFrUnits(activeId);
+      const isValid = widgetUnits <= maxFrUnits;
+
+      console.log('🎯 Over section boundary:', { boundaryPosition, widgetUnits, maxFrUnits, isValid });
+
+      setSectionBoundaryIndicator({ position: boundaryPosition, isValid });
+      setDropIndicator(null);
       return;
     }
+
+    // Clear section boundary indicator if over widget
+    setSectionBoundaryIndicator(null);
+
+    // Find which section the active widget belongs to (null for library items)
+    const activeSection = active.data.current?.type === 'library-item'
+      ? null
+      : getWidgetSection(activeId);
 
     // Find which section the over widget belongs to
     const overSection = getWidgetSection(overId);
@@ -3011,49 +3042,216 @@ export default function Frame2() {
       return;
     }
 
-    console.log('📍 Sections:', { activeSection, overSection });
+    console.log('📍 Sections:', { activeSectionId: activeSection?.id, overSectionId: overSection.id });
 
     // Calculate where to show the drop indicator
-    const overArray = widgetOrder[overSection];
-    const overIndex = overArray.indexOf(overId);
-    
+    const overIndex = overSection.widgetIds.indexOf(overId);
+
     // Validate if the widget can be dropped here
-    const isValid = canDropInSection(activeId, overSection, activeSection);
-    
-    console.log('✨ Setting drop indicator:', { 
-      section: overSection, 
+    const isValid = canDropInSection(activeId, overSection.id, activeSection?.id);
+
+    console.log('✨ Setting drop indicator:', {
+      sectionId: overSection.id,
       index: overIndex + 1,
       isValid,
       activeUnits: getWidgetFrUnits(activeId),
-      usedUnits: calculateUsedUnits(overSection), // Don't exclude anything for the log
+      usedUnits: calculateUsedUnits(overSection.id),
       maxUnits: maxFrUnits
     });
-    
+
     // Show indicator at the position after the over widget
     setDropIndicator({
-      section: overSection,
+      sectionId: overSection.id,
       index: overIndex + 1,
       isValid,
     });
   }, [getWidgetSection, widgetOrder, maxFrUnits, canDropInSection, getWidgetFrUnits, calculateUsedUnits]);
 
+  // Function to create a new section at a boundary
+  const createSectionAtBoundary = useCallback((
+    widgetId: string,
+    sourceSectionId: string,
+    boundaryPosition: number
+  ) => {
+    console.log('🆕 Creating section at boundary:', { widgetId, sourceSectionId, boundaryPosition });
+
+    setWidgetOrder(prev => {
+      let sections = [...prev.sections];
+
+      // Remove widget from source section
+      sections = sections.map(section =>
+        section.id === sourceSectionId
+          ? { ...section, widgetIds: section.widgetIds.filter(id => id !== widgetId) }
+          : section
+      );
+
+      // Clean up empty source section (keep minimum 1)
+      if (sections.length > 1) {
+        sections = sections.filter(s => s.widgetIds.length > 0);
+      }
+
+      // Create new section
+      const newSection: Section = {
+        id: `section-${Date.now()}`,
+        widgetIds: [widgetId],
+        order: boundaryPosition,
+      };
+
+      // Insert at boundary position
+      sections.splice(boundaryPosition, 0, newSection);
+
+      // Update order values
+      sections.forEach((section, index) => {
+        section.order = index;
+      });
+
+      return { sections };
+    });
+  }, [setWidgetOrder]);
+
   // Global drag end handler - handles both intra and inter-section dragging
+  // Handler for dropping library widgets
+  const handleLibraryWidgetDrop = useCallback((active: any, over: any) => {
+    const libraryWidgetId = active.data.current?.widgetId;
+    const overId = over.id as string;
+
+    // Map AVAILABLE_WIDGETS IDs to implemented widget IDs
+    const WIDGET_ID_MAP: Record<string, string> = {
+      'avg-first-response': 'avg-first-response-time',
+      'conversation-volume-time': 'conversation-volume',
+      'conversation-breakdown': 'sankey',
+      'weekly-average': 'heatmap',
+    };
+
+    // Get the actual widget ID used in the implementation
+    const baseWidgetId = WIDGET_ID_MAP[libraryWidgetId] || libraryWidgetId;
+
+    // Generate unique widget ID with timestamp
+    const uniqueWidgetId = `${baseWidgetId}__${Date.now()}`;
+
+    console.log('📚 Library widget drop:', { libraryWidgetId, baseWidgetId, uniqueWidgetId, overId });
+
+    // Handle section boundary drop
+    if (typeof overId === 'string' && overId.startsWith('section-boundary-')) {
+      const boundaryPosition = parseInt(overId.split('-')[2]);
+      const widgetUnits = getWidgetFrUnits(baseWidgetId);
+
+      if (widgetUnits <= maxFrUnits) {
+        console.log('✅ Creating new section at boundary', boundaryPosition);
+        // Create new section with library widget
+        setWidgetOrder(prev => {
+          let sections = [...prev.sections];
+
+          // Create new section
+          const newSection = {
+            id: `section-${Date.now()}`,
+            widgetIds: [uniqueWidgetId],
+            order: boundaryPosition,
+          };
+
+          // Insert at boundary position
+          sections.splice(boundaryPosition, 0, newSection);
+
+          // Update order values
+          sections.forEach((section, index) => {
+            section.order = index;
+          });
+
+          return { sections };
+        });
+      } else {
+        console.warn('❌ Widget too large for new section');
+      }
+      return;
+    }
+
+    // Handle drop on section widget
+    const overSection = getWidgetSection(overId);
+    if (!overSection) {
+      console.warn('❌ Over section not found');
+      return;
+    }
+
+    const overIndex = overSection.widgetIds.indexOf(overId);
+    const isValid = canDropInSection(baseWidgetId, overSection.id, undefined);
+
+    if (isValid) {
+      console.log('✅ Adding widget to section', overSection.id, 'at index', overIndex + 1);
+      // Add widget to section with unique ID
+      setWidgetOrder(prev => {
+        const sections = prev.sections.map(section => {
+          if (section.id === overSection.id) {
+            const newWidgetIds = [...section.widgetIds];
+            newWidgetIds.splice(overIndex + 1, 0, uniqueWidgetId);
+            return { ...section, widgetIds: newWidgetIds };
+          }
+          return section;
+        });
+        return { sections };
+      });
+    } else {
+      console.warn('❌ Drop not allowed - exceeds FR unit limit');
+    }
+  }, [getWidgetFrUnits, maxFrUnits, getWidgetSection, canDropInSection, setWidgetOrder]);
+
   const handleGlobalDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
 
-    console.log('🏁 DragEnd:', { active: active.id, over: over?.id });
+    console.log('🏁 DragEnd:', {
+      activeId: active.id,
+      overId: over?.id,
+      'active.data': active.data,
+      'active.data.current': active.data.current,
+      typeCurrent: active.data.current?.type,
+      typeDirect: (active.data as any)?.type
+    });
 
-    // Clear drop indicator and active widget
+    // Clear drop indicators and active widget
     setDropIndicator(null);
+    setSectionBoundaryIndicator(null);
     setActiveId(null);
+    setDraggingFromLibrary(false);
 
     if (!over) {
       console.log('❌ No over target');
       return;
     }
 
+    // Check if dragging from library by checking if id starts with 'library-'
+    const isLibraryItem = typeof active.id === 'string' && active.id.startsWith('library-');
+    console.log('🔍 Checking library item:', { activeId: active.id, isLibraryItem });
+
+    if (isLibraryItem) {
+      console.log('✅ Is library item, calling handleLibraryWidgetDrop');
+      handleLibraryWidgetDrop(active, over);
+      return;
+    }
+    console.log('❌ Not a library item, continuing with normal widget logic');
+
     const activeId = active.id as string;
     const overId = over.id as string;
+
+    // Handle section boundary drop (create new section)
+    if (typeof overId === 'string' && overId.startsWith('section-boundary-')) {
+      const boundaryPosition = parseInt(overId.split('-')[2]);
+      const activeSection = getWidgetSection(activeId);
+
+      if (!activeSection) {
+        console.warn('❌ Active section not found');
+        return;
+      }
+
+      // Validate: widget fits in new section
+      const widgetUnits = getWidgetFrUnits(activeId);
+      if (widgetUnits > maxFrUnits) {
+        console.warn('❌ Widget too large for new section');
+        return;
+      }
+
+      // Create new section at boundary
+      createSectionAtBoundary(activeId, activeSection.id, boundaryPosition);
+      return;
+    }
 
     // Find which section the active widget belongs to
     const activeSection = getWidgetSection(activeId);
@@ -3075,40 +3273,38 @@ export default function Frame2() {
       return;
     }
 
-    console.log('✅ Moving from', activeSection, 'to', overSection);
+    console.log('✅ Moving from', activeSection.id, 'to', overSection.id);
     console.log('🔍 About to validate:', {
       activeId,
-      overSection,
-      activeSection,
-      isSameSection: activeSection === overSection
+      overSectionId: overSection.id,
+      activeSectionId: activeSection.id,
+      isSameSection: activeSection.id === overSection.id
     });
 
     // Validate if the drop is allowed
-    const isValidDrop = canDropInSection(activeId, overSection, activeSection);
+    const isValidDrop = canDropInSection(activeId, overSection.id, activeSection.id);
     console.log('📋 Validation result:', isValidDrop);
-    
+
     if (!isValidDrop) {
       console.warn('❌ Drop not allowed - exceeds FR unit limit');
       return;
     }
 
     // Same section - just reorder
-    if (activeSection === overSection) {
-      const currentOrder = widgetOrder[activeSection];
-      const oldIndex = currentOrder.indexOf(activeId);
-      const newIndex = currentOrder.indexOf(overId);
-      const newOrder = arrayMove(currentOrder, oldIndex, newIndex);
-      
-      updateSectionOrder(activeSection, newOrder);
+    if (activeSection.id === overSection.id) {
+      const oldIndex = activeSection.widgetIds.indexOf(activeId);
+      const newIndex = activeSection.widgetIds.indexOf(overId);
+      const newOrder = arrayMove(activeSection.widgetIds, oldIndex, newIndex);
+
+      updateSectionOrder(activeSection.id, newOrder);
     } else {
       // Cross-section move
-      const overArray = widgetOrder[overSection];
-      const overIndex = overArray.indexOf(overId);
-      
+      const overIndex = overSection.widgetIds.indexOf(overId);
+
       // Move widget to new section
-      moveWidgetBetweenSections(activeId, activeSection, overSection, overIndex + 1);
+      moveWidgetBetweenSections(activeId, activeSection.id, overSection.id, overIndex + 1);
     }
-  }, [getWidgetSection, widgetOrder, updateSectionOrder, moveWidgetBetweenSections, maxFrUnits, canDropInSection]);
+  }, [getWidgetSection, widgetOrder, updateSectionOrder, moveWidgetBetweenSections, maxFrUnits, canDropInSection, getWidgetFrUnits, createSectionAtBoundary, setWidgetOrder, handleLibraryWidgetDrop]);
 
   // Recalculate metrics when filters change
   useEffect(() => {
@@ -3376,10 +3572,150 @@ export default function Frame2() {
     setInsertedSections(prev => prev.filter(section => section.id !== sectionId));
   };
 
+  // Render full widget with all configurations
+  const renderWidget = (widgetId: string, sectionId: string, sectionSpans: Record<string, number>) => {
+    // Extract base widget ID from unique ID
+    const baseWidgetId = getBaseWidgetId(widgetId);
+
+    // StatWidgets configuration (use baseWidgetId for lookup)
+    const statWidgetConfig: Record<string, any> = {
+      'avg-answer-time': {
+        title: "Avg. answer time",
+        value: metrics.avgAnswerTime,
+        impact: { percentage: metrics.avgAnswerTimeChange, direction: metrics.avgAnswerTimeChange.startsWith('+') ? "up" as const : "down" as const },
+        tooltipText: "Average time taken to answer incoming conversations",
+        scope: "Both" as const,
+        trendData: metrics.avgAnswerTimeTrend,
+        isUpPositive: false,
+        valueType: "time" as const,
+      },
+      'avg-handle-time': {
+        title: "Avg. handle time",
+        value: metrics.avgHandleTime,
+        impact: { percentage: metrics.avgHandleTimeChange, direction: metrics.avgHandleTimeChange.startsWith('+') ? "up" as const : "down" as const },
+        tooltipText: "Average time spent handling each conversation from start to resolution",
+        scope: "Both" as const,
+        trendData: metrics.avgHandleTimeTrend,
+        isUpPositive: false,
+        valueType: "time" as const,
+      },
+      'avg-first-response-time': {
+        title: "Avg. first response time",
+        value: metrics.avgFirstResponseTime,
+        impact: { percentage: metrics.avgFirstResponseTimeChange, direction: metrics.avgFirstResponseTimeChange.startsWith('+') ? "up" as const : "down" as const },
+        tooltipText: "Average time until the first response is sent to a customer",
+        scope: "Digital" as const,
+        trendData: metrics.avgFirstResponseTimeTrend,
+        isUpPositive: false,
+        valueType: "time" as const,
+      },
+      'transfer-rate': {
+        title: "Transfer rate",
+        value: metrics.transferRate,
+        impact: { percentage: metrics.transferRateChange, direction: metrics.transferRateChange.startsWith('+') ? "up" as const : "down" as const },
+        tooltipText: "Percentage of conversations transferred to another agent or department",
+        scope: "Both" as const,
+        trendData: metrics.transferRateTrend,
+        isUpPositive: false,
+        valueType: "percentage" as const,
+      },
+      'deflection-rate': {
+        title: "Deflection rate",
+        value: metrics.deflectionRate,
+        tooltipText: "Percentage of conversations resolved without agent intervention",
+        scope: "Both" as const,
+        impact: { percentage: metrics.deflectionRateChange, direction: metrics.deflectionRateChange.startsWith('+') ? "up" as const : "down" as const },
+        trendData: metrics.deflectionRateTrend,
+        isUpPositive: true,
+        valueType: "percentage" as const,
+      },
+    };
+
+    // Render StatWidget if it's in the config (use baseWidgetId for lookup)
+    if (statWidgetConfig[baseWidgetId]) {
+      const config = statWidgetConfig[baseWidgetId];
+      return (
+        <div className="h-full min-h-[88px]">
+          <StatWidget
+            title={config.title}
+            widgetId={widgetId}
+            value={config.value}
+            impact={config.impact}
+            tooltipText={config.tooltipText}
+            scope={config.scope}
+            trendData={config.trendData}
+            isUpPositive={config.isUpPositive}
+            valueType={config.valueType}
+            onMaximize={() => setMaximizedWidget(widgetId)}
+            onRemove={() => handleRemoveMainWidget(widgetId)}
+            onDuplicate={() => handleDuplicateWidget(widgetId)}
+            isDraggable={true}
+          />
+        </div>
+      );
+    }
+
+    // Conversation Volume Widget (use baseWidgetId for comparison)
+    if (baseWidgetId === 'conversation-volume') {
+      return (
+        <div className="h-full min-h-[260px]">
+          <ConversationVolumeOverTimeWithDot
+            metricsData={metrics}
+            onMaximize={() => setMaximizedWidget('conversation-volume')}
+            onRemove={() => handleRemoveMainWidget('conversation-volume')}
+            onDuplicate={() => handleDuplicateWidget('conversation-volume')}
+            isDraggable={true}
+          />
+        </div>
+      );
+    }
+
+    // Sankey Widget (use baseWidgetId for comparison)
+    if (baseWidgetId === 'sankey') {
+      return (
+        <div className="h-full min-h-[320px]">
+          <SankeyWidget
+            onMaximize={() => setMaximizedWidget('sankey')}
+            onRemove={() => handleRemoveMainWidget('sankey')}
+            onDuplicate={() => handleDuplicateWidget('sankey')}
+            isDraggable={true}
+          />
+        </div>
+      );
+    }
+
+    // Heatmap Widget (use baseWidgetId for comparison)
+    if (baseWidgetId === 'heatmap') {
+      return (
+        <div className="h-full min-h-[320px]">
+          <HeatmapWidget
+            data={processHeatmapData(metrics.heatmapData)}
+            onMaximize={() => setMaximizedWidget('heatmap')}
+            onRemove={() => handleRemoveMainWidget('heatmap')}
+            onDuplicate={() => handleDuplicateWidget('heatmap')}
+            isDraggable={true}
+          />
+        </div>
+      );
+    }
+
+    // Fallback for unknown widgets
+    return <div className="bg-white p-4 rounded shadow h-full min-h-[88px]">Unknown widget: {widgetId}</div>;
+  };
+
   // Render widget preview for DragOverlay
   const renderWidgetPreview = (widgetId: string) => {
-    // StatWidgets
-    if (['avg-answer-time', 'avg-handle-time', 'avg-first-response-time', 'transfer-rate', 'deflection-rate'].includes(widgetId)) {
+    // Handle library widget preview (strip prefix)
+    if (widgetId.startsWith('library-')) {
+      const actualId = widgetId.replace('library-', '');
+      return renderWidgetPreview(actualId);
+    }
+
+    // Extract base widget ID for rendering (handles unique IDs with timestamp)
+    const baseWidgetId = getBaseWidgetId(widgetId);
+
+    // StatWidgets (use baseWidgetId for comparison)
+    if (['avg-answer-time', 'avg-handle-time', 'avg-first-response-time', 'transfer-rate', 'deflection-rate'].includes(baseWidgetId)) {
       const widgetConfig: any = {
         'avg-answer-time': {
           title: "Avg. answer time",
@@ -3402,7 +3738,7 @@ export default function Frame2() {
           value: metrics.deflectionRate,
         },
       };
-      const config = widgetConfig[widgetId];
+      const config = widgetConfig[baseWidgetId];
       return (
         <div className="w-[180px] h-[88px] bg-white rounded-lg shadow-lg border border-gray-200">
           <div className="p-3">
@@ -3413,8 +3749,8 @@ export default function Frame2() {
       );
     }
 
-    // Conversation Volume
-    if (widgetId === 'conversation-volume') {
+    // Conversation Volume (use baseWidgetId for comparison)
+    if (baseWidgetId === 'conversation-volume') {
       return (
         <div className="w-[400px] h-[260px] bg-white rounded-lg shadow-lg border border-gray-200">
           <div className="p-4 text-sm font-medium">Conversation volume over time</div>
@@ -3422,8 +3758,8 @@ export default function Frame2() {
       );
     }
 
-    // Sankey
-    if (widgetId === 'sankey') {
+    // Sankey (use baseWidgetId for comparison)
+    if (baseWidgetId === 'sankey') {
       return (
         <div className="w-[800px] h-[320px] bg-white rounded-lg shadow-lg border border-gray-200">
           <div className="p-4 text-sm font-medium">Conversation volume breakdown</div>
@@ -3431,8 +3767,8 @@ export default function Frame2() {
       );
     }
 
-    // Heatmap
-    if (widgetId === 'heatmap') {
+    // Heatmap (use baseWidgetId for comparison)
+    if (baseWidgetId === 'heatmap') {
       return (
         <div className="w-[800px] h-[320px] bg-white rounded-lg shadow-lg border border-gray-200">
           <div className="p-4 text-sm font-medium">Weekly average volume</div>
@@ -3445,767 +3781,66 @@ export default function Frame2() {
 
   return (
     <div className="flex flex-col items-start w-full min-h-full bg-[rgb(255,255,255)]">
-      {/* Header */}
-      <PageHeader onAddWidget={handleAddWidget} getWidgetOrder={getCurrentOrder} />
-      
-      {/* Dashboard Content */}
-      <DndContext 
+      {/* Dashboard Content - DndContext wraps everything including header */}
+      <DndContext
         sensors={sensors}
         collisionDetection={pointerWithin}
         onDragStart={handleDragStart}
         onDragOver={handleGlobalDragOver}
         onDragEnd={handleGlobalDragEnd}
       >
+        {/* Header */}
+        <PageHeader onAddWidget={handleAddWidget} getWidgetOrder={getCurrentOrder} />
+
         <div className="flex flex-col items-start gap-3 px-[24px] py-[16px] w-full pt-[0px] pr-[32px] pb-[16px] pl-[32px]">
-          {/* Sección 1: Stats Widgets */}
-          <SortableContext 
-            items={statWidgetsOrder.filter(id => !removedWidgets.has(id))}
-            strategy={horizontalListSortingStrategy}
-          >
-            <div className="grid gap-3 w-full" style={{ gridTemplateColumns: section1Grid }}>
-              {/* Drop indicator at start of section */}
-              {shouldShowIndicator('statWidgets', 0) && (
-                <div className="col-span-full relative h-0">
-                  <div className="absolute top-0 left-0 right-0">
-                    <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                  </div>
-                </div>
-              )}
-              
-              {statWidgetsOrder
-                .filter(id => !removedWidgets.has(id))
-                .map((widgetId, index) => {
-                  const widgetConfig = {
-                    'avg-answer-time': {
-                      title: "Avg. answer time",
-                      value: metrics.avgAnswerTime,
-                      impact: { percentage: metrics.avgAnswerTimeChange, direction: metrics.avgAnswerTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time taken to answer incoming conversations",
-                      scope: "Both" as const,
-                      trendData: metrics.avgAnswerTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'avg-handle-time': {
-                      title: "Avg. handle time",
-                      value: metrics.avgHandleTime,
-                      impact: { percentage: metrics.avgHandleTimeChange, direction: metrics.avgHandleTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time spent handling each conversation from start to resolution",
-                      scope: "Both" as const,
-                      trendData: metrics.avgHandleTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'avg-first-response-time': {
-                      title: "Avg. first response time",
-                      value: metrics.avgFirstResponseTime,
-                      impact: { percentage: metrics.avgFirstResponseTimeChange, direction: metrics.avgFirstResponseTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time until the first response is sent to a customer",
-                      scope: "Digital" as const,
-                      trendData: metrics.avgFirstResponseTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'transfer-rate': {
-                      title: "Transfer rate",
-                      value: metrics.transferRate,
-                      impact: { percentage: metrics.transferRateChange, direction: metrics.transferRateChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Percentage of conversations transferred to another agent or department",
-                      scope: "Both" as const,
-                      trendData: metrics.transferRateTrend,
-                      isUpPositive: false,
-                      valueType: "percentage" as const,
-                    },
-                  };
+          {/* Dynamic Sections Rendering */}
+          {widgetOrder.sections.map((section, sectionIndex) => {
+            const visibleWidgets = section.widgetIds.filter(id => !removedWidgets.has(id));
 
-                  const config = widgetConfig[widgetId as keyof typeof widgetConfig];
-                  
-                  // Render StatWidgets
-                  if (config) {
-                    return (
-                      <div key={widgetId} className="contents">
-                        <SortableWidget id={widgetId}>
-                          <div className="min-h-[88px]">
-                            <StatWidget
-                            title={config.title}
-                            widgetId={widgetId}
-                            value={config.value}
-                            impact={config.impact}
-                            tooltipText={config.tooltipText}
-                            scope={config.scope}
-                            trendData={config.trendData}
-                            isUpPositive={config.isUpPositive}
-                            valueType={config.valueType}
-                            onMaximize={() => setMaximizedWidget(widgetId)}
-                            onRemove={() => handleRemoveMainWidget(widgetId)}
-                            onDuplicate={() => handleDuplicateWidget(widgetId)}
-                            isDraggable={true}
-                          />
-                          </div>
-                        </SortableWidget>
-                        
-                        {/* Drop indicator after this widget */}
-                        {shouldShowIndicator('statWidgets', index + 1) && (
-                          <div className="col-span-full">
-                            <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  
-                  // Handle non-StatWidget types moved to this section
-                  if (widgetId === 'deflection-rate') {
-                    return (
-                      <div key={widgetId} className="contents">
-                        <SortableWidget id={widgetId}>
-                          <div className="min-h-[88px]">
-                            <StatWidget
-                              title="Deflection rate"
-                          widgetId="deflection-rate"
-                          value={metrics.deflectionRate}
-                          impact={{ percentage: metrics.deflectionRateChange, direction: metrics.deflectionRateChange.startsWith('+') ? "up" : "down" }}
-                          tooltipText="Percentage of conversations resolved without agent intervention"
-                          scope="Both"
-                          trendData={metrics.deflectionRateTrend}
-                          isUpPositive={true}
-                          valueType="percentage"
-                          onMaximize={() => setMaximizedWidget('deflection-rate')}
-                          onRemove={() => handleRemoveMainWidget('deflection-rate')}
-                          onDuplicate={() => handleDuplicateWidget('deflection-rate')}
-                          isDraggable={true}
-                        />
-                        </div>
-                      </SortableWidget>
-                      
-                      {/* Drop indicator after this widget */}
-                      {shouldShowIndicator('statWidgets', index + 1) && (
-                        <div className="col-span-full">
-                          <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                        </div>
-                      )}
-                    </div>
-                    );
-                  }
-                  
-                  if (widgetId === 'conversation-volume') {
-                    return (
-                      <div key={widgetId} className="contents">
-                        <div className="min-h-[88px]">
-                          <ConversationVolumeOverTimeWithDot 
-                            metricsData={metrics} 
-                            onMaximize={() => setMaximizedWidget('conversation-volume')}
-                            onRemove={() => handleRemoveMainWidget('conversation-volume')}
-                            onDuplicate={() => handleDuplicateWidget('conversation-volume')}
-                            isDraggable={true}
-                          />
-                        </div>
-                        
-                        {/* Drop indicator after this widget */}
-                        {shouldShowIndicator('statWidgets', index + 1) && (
-                          <div className="col-span-full">
-                            <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  
-                  if (widgetId === 'sankey') {
-                    return (
-                      <div key={widgetId} className="contents">
-                        <div className="min-h-[88px]">
-                          <SankeyWidget 
-                            onMaximize={() => setMaximizedWidget('sankey')}
-                            onRemove={() => handleRemoveMainWidget('sankey')}
-                            onDuplicate={() => handleDuplicateWidget('sankey')}
-                            isDraggable={true}
-                          />
-                        </div>
-                        
-                        {/* Drop indicator after this widget */}
-                        {shouldShowIndicator('statWidgets', index + 1) && (
-                          <div className="col-span-full">
-                            <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  
-                  if (widgetId === 'heatmap') {
-                    return (
-                      <div key={widgetId} className="contents">
-                        <div className="min-h-[88px]">
-                          <HeatmapWidget 
-                            data={processHeatmapData(metrics.heatmapData)} 
-                            onMaximize={() => setMaximizedWidget('heatmap')}
-                            onRemove={() => handleRemoveMainWidget('heatmap')}
-                            onDuplicate={() => handleDuplicateWidget('heatmap')}
-                            isDraggable={true}
-                          />
-                        </div>
-                        
-                        {/* Drop indicator after this widget */}
-                        {shouldShowIndicator('statWidgets', index + 1) && (
-                          <div className="col-span-full">
-                            <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  
-                  return null;
-                })}
-            </div>
-          </SortableContext>
-      
-          {/* Secciones insertadas después de Sección 1 */}
-      {insertedSections
-        .filter(section => section.afterSection === 1)
-        .map(section => (
-          <div 
-            key={section.id} 
-            id={section.id}
-            className="grid gap-3 w-full"
-            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))' }}
-          >
-            {section.widgets.map((widget, index) => renderInsertedWidget(widget.id, section.id, index))}
+            return (
+              <React.Fragment key={section.id}>
+                {/* Section boundary above */}
+                <SectionBoundary
+                  position={sectionIndex}
+                  showIndicator={sectionBoundaryIndicator?.position === sectionIndex}
+                  isValid={sectionBoundaryIndicator?.isValid ?? true}
+                  isDragging={!!activeId}
+                />
+
+                {/* Section content */}
+                <DynamicSection
+                  section={section}
+                  visibleWidgets={visibleWidgets}
+                  maxFrUnits={maxFrUnits}
+                  renderWidget={renderWidget}
+                  shouldShowIndicator={shouldShowIndicator}
+                  dropIndicator={dropIndicator}
+                  DropIndicator={DropIndicator}
+                  SortableWidget={SortableWidget}
+                  getWidgetColumnSpan={getWidgetColumnSpan}
+                />
+
+                {/* Section boundary below (after last section) */}
+                {sectionIndex === widgetOrder.sections.length - 1 && (
+                  <SectionBoundary
+                    position={sectionIndex + 1}
+                    showIndicator={sectionBoundaryIndicator?.position === sectionIndex + 1}
+                    isValid={sectionBoundaryIndicator?.isValid ?? true}
+                    isDragging={!!activeId}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
+
+      {/* Inserted Sections (for duplicated widgets) */}
+      {insertedSections.flatMap((section) =>
+        section.widgets.map((widget, index) => (
+          <div key={`${section.id}-${widget.id}-${index}`} className="grid gap-3 w-full">
+            {renderInsertedWidget(widget.id, section.id, index)}
           </div>
         ))
-      }
-
-          {/* Sección 2: Deflection rate and Conversation volume */}
-          <SortableContext 
-          items={section2Order.filter(id => !removedWidgets.has(id))}
-          strategy={horizontalListSortingStrategy}
-        >
-          <div className="grid gap-3 w-full" style={{ gridTemplateColumns: section2Grid }}>
-            {/* Drop indicator at start of section */}
-            {shouldShowIndicator('section2', 0) && (
-              <div className="col-span-full relative h-0">
-                <div className="absolute top-0 left-0 right-0">
-                  <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                </div>
-              </div>
-            )}
-            
-            {section2Order
-              .filter(id => !removedWidgets.has(id))
-              .map((widgetId, index) => {
-                if (widgetId === 'deflection-rate') {
-                  return (
-                    <div key={widgetId} className="contents">
-                      <SortableWidget id={widgetId}>
-                        <div className="min-h-[260px]">
-                          <StatWidget
-                          title="Deflection rate"
-                          widgetId="deflection-rate"
-                          value={metrics.deflectionRate}
-                          tooltipText="Percentage of conversations resolved without agent intervention"
-                          scope="Both"
-                          impact={{ percentage: metrics.deflectionRateChange, direction: metrics.deflectionRateChange.startsWith('+') ? "up" : "down" }}
-                          trendData={metrics.deflectionRateTrend}
-                          isUpPositive={true}
-                          valueType="percentage"
-                          onMaximize={() => setMaximizedWidget('deflection-rate')}
-                          onRemove={() => handleRemoveMainWidget('deflection-rate')}
-                          onDuplicate={() => handleDuplicateWidget('deflection-rate')}
-                          isDraggable={true}
-                        />
-                        </div>
-                      </SortableWidget>
-                      
-                      {/* Drop indicator after this widget */}
-                      {shouldShowIndicator('section2', index + 1) && (
-                        <div className="col-span-full">
-                          <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'conversation-volume') {
-                  return (
-                    <div key={widgetId} className="contents">
-                      <SortableWidget id={widgetId}>
-                        <div className="min-h-[260px]">
-                          <ConversationVolumeOverTimeWithDot 
-                            metricsData={metrics} 
-                            onMaximize={() => setMaximizedWidget('conversation-volume')}
-                            onRemove={() => handleRemoveMainWidget('conversation-volume')}
-                            onDuplicate={() => handleDuplicateWidget('conversation-volume')}
-                            isDraggable={true}
-                          />
-                        </div>
-                      </SortableWidget>
-                      
-                      {/* Drop indicator after this widget */}
-                      {shouldShowIndicator('section2', index + 1) && (
-                        <div className="col-span-full">
-                          <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                
-                // Handle StatWidgets moved to this section
-                if (widgetId === 'avg-answer-time') {
-                  return (
-                    <div key={widgetId} className="min-h-[260px]">
-                      <StatWidget
-                        title="Avg. answer time"
-                        widgetId={widgetId}
-                        value={metrics.avgAnswerTime}
-                        impact={{ percentage: metrics.avgAnswerTimeChange, direction: metrics.avgAnswerTimeChange.startsWith('+') ? "up" : "down" }}
-                        tooltipText="Average time taken to answer incoming conversations"
-                        scope="Both"
-                        trendData={metrics.avgAnswerTimeTrend}
-                        isUpPositive={false}
-                        valueType="time"
-                        onMaximize={() => setMaximizedWidget(widgetId)}
-                        onRemove={() => handleRemoveMainWidget(widgetId)}
-                        onDuplicate={() => handleDuplicateWidget(widgetId)}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'avg-handle-time') {
-                  return (
-                    <div key={widgetId} className="min-h-[260px]">
-                      <StatWidget
-                        title="Avg. handle time"
-                        widgetId={widgetId}
-                        value={metrics.avgHandleTime}
-                        impact={{ percentage: metrics.avgHandleTimeChange, direction: metrics.avgHandleTimeChange.startsWith('+') ? "up" : "down" }}
-                        tooltipText="Average time spent handling each conversation from start to resolution"
-                        scope="Both"
-                        trendData={metrics.avgHandleTimeTrend}
-                        isUpPositive={false}
-                        valueType="time"
-                        onMaximize={() => setMaximizedWidget(widgetId)}
-                        onRemove={() => handleRemoveMainWidget(widgetId)}
-                        onDuplicate={() => handleDuplicateWidget(widgetId)}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'avg-first-response-time') {
-                  return (
-                    <div key={widgetId} className="min-h-[260px]">
-                      <StatWidget
-                        title="Avg. first response time"
-                        widgetId={widgetId}
-                        value={metrics.avgFirstResponseTime}
-                        impact={{ percentage: metrics.avgFirstResponseTimeChange, direction: metrics.avgFirstResponseTimeChange.startsWith('+') ? "up" : "down" }}
-                        tooltipText="Average time until the first response is sent to a customer"
-                        scope="Digital"
-                        trendData={metrics.avgFirstResponseTimeTrend}
-                        isUpPositive={false}
-                        valueType="time"
-                        onMaximize={() => setMaximizedWidget(widgetId)}
-                        onRemove={() => handleRemoveMainWidget(widgetId)}
-                        onDuplicate={() => handleDuplicateWidget(widgetId)}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'transfer-rate') {
-                  return (
-                    <div key={widgetId} className="min-h-[260px]">
-                      <StatWidget
-                        title="Transfer rate"
-                        widgetId={widgetId}
-                        value={metrics.transferRate}
-                        impact={{ percentage: metrics.transferRateChange, direction: metrics.transferRateChange.startsWith('+') ? "up" : "down" }}
-                        tooltipText="Percentage of conversations transferred to another agent or department"
-                        scope="Both"
-                        trendData={metrics.transferRateTrend}
-                        isUpPositive={false}
-                        valueType="percentage"
-                        onMaximize={() => setMaximizedWidget(widgetId)}
-                        onRemove={() => handleRemoveMainWidget(widgetId)}
-                        onDuplicate={() => handleDuplicateWidget(widgetId)}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'sankey') {
-                  return (
-                    <div key={widgetId} className="min-h-[400px]">
-                      <SankeyWidget 
-                        onMaximize={() => setMaximizedWidget('sankey')}
-                        onRemove={() => handleRemoveMainWidget('sankey')}
-                        onDuplicate={() => handleDuplicateWidget('sankey')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'heatmap') {
-                  return (
-                    <div key={widgetId} className="min-h-[320px]">
-                      <HeatmapWidget 
-                        data={processHeatmapData(metrics.heatmapData)} 
-                        onMaximize={() => setMaximizedWidget('heatmap')}
-                        onRemove={() => handleRemoveMainWidget('heatmap')}
-                        onDuplicate={() => handleDuplicateWidget('heatmap')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                return null;
-              })}
-          </div>
-          </SortableContext>
-      
-          {/* Secciones insertadas después de Sección 2 */}
-      {insertedSections
-        .filter(section => section.afterSection === 2)
-        .map(section => (
-          <div 
-            key={section.id} 
-            id={section.id}
-            className="grid gap-3 w-full"
-            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))' }}
-          >
-            {section.widgets.map((widget, index) => (
-              <div key={`${section.id}-${widget.id}-${index}`} className="min-h-[320px]">
-                {renderInsertedWidget(widget.id, section.id, index)}
-              </div>
-            ))}
-          </div>
-        ))
-      }
-
-          {/* Sección 3: Sankey Widget */}
-          <SortableContext 
-          items={section3Order.filter(id => !removedWidgets.has(id))}
-          strategy={horizontalListSortingStrategy}
-        >
-          <div className="grid gap-3 w-full" style={{ gridTemplateColumns: section3Grid }}>
-            {section3Order
-              .filter(id => !removedWidgets.has(id))
-              .map(widgetId => {
-                if (widgetId === 'sankey') {
-                  return (
-                    <div key={widgetId} className="min-h-[400px]">
-                      <SankeyWidget 
-                        onMaximize={() => setMaximizedWidget('sankey')}
-                        onRemove={() => handleRemoveMainWidget('sankey')}
-                        onDuplicate={() => handleDuplicateWidget('sankey')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                // Handle other widgets moved to this section - use section's min height
-                if (widgetId === 'heatmap') {
-                  return (
-                    <div key={widgetId} className="min-h-[400px]">
-                      <HeatmapWidget 
-                        data={processHeatmapData(metrics.heatmapData)} 
-                        onMaximize={() => setMaximizedWidget('heatmap')}
-                        onRemove={() => handleRemoveMainWidget('heatmap')}
-                        onDuplicate={() => handleDuplicateWidget('heatmap')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'deflection-rate') {
-                  return (
-                    <div key={widgetId} className="min-h-[400px]">
-                      <StatWidget
-                        title="Deflection rate"
-                        widgetId="deflection-rate"
-                        value={metrics.deflectionRate}
-                        impact={{ percentage: metrics.deflectionRateChange, direction: metrics.deflectionRateChange.startsWith('+') ? "up" : "down" }}
-                        tooltipText="Percentage of conversations resolved without agent intervention"
-                        scope="Both"
-                        trendData={metrics.deflectionRateTrend}
-                        isUpPositive={true}
-                        valueType="percentage"
-                        onMaximize={() => setMaximizedWidget('deflection-rate')}
-                        onRemove={() => handleRemoveMainWidget('deflection-rate')}
-                        onDuplicate={() => handleDuplicateWidget('deflection-rate')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'conversation-volume') {
-                  return (
-                    <div key={widgetId} className="min-h-[400px]">
-                      <ConversationVolumeOverTimeWithDot 
-                        metricsData={metrics} 
-                        onMaximize={() => setMaximizedWidget('conversation-volume')}
-                        onRemove={() => handleRemoveMainWidget('conversation-volume')}
-                        onDuplicate={() => handleDuplicateWidget('conversation-volume')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                // StatWidgets
-                if (widgetId === 'avg-answer-time' || widgetId === 'avg-handle-time' || 
-                    widgetId === 'avg-first-response-time' || widgetId === 'transfer-rate') {
-                  const configs = {
-                    'avg-answer-time': {
-                      title: "Avg. answer time",
-                      value: metrics.avgAnswerTime,
-                      impact: { percentage: metrics.avgAnswerTimeChange, direction: metrics.avgAnswerTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time taken to answer incoming conversations",
-                      scope: "Both" as const,
-                      trendData: metrics.avgAnswerTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'avg-handle-time': {
-                      title: "Avg. handle time",
-                      value: metrics.avgHandleTime,
-                      impact: { percentage: metrics.avgHandleTimeChange, direction: metrics.avgHandleTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time spent handling each conversation from start to resolution",
-                      scope: "Both" as const,
-                      trendData: metrics.avgHandleTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'avg-first-response-time': {
-                      title: "Avg. first response time",
-                      value: metrics.avgFirstResponseTime,
-                      impact: { percentage: metrics.avgFirstResponseTimeChange, direction: metrics.avgFirstResponseTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time until the first response is sent to a customer",
-                      scope: "Digital" as const,
-                      trendData: metrics.avgFirstResponseTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'transfer-rate': {
-                      title: "Transfer rate",
-                      value: metrics.transferRate,
-                      impact: { percentage: metrics.transferRateChange, direction: metrics.transferRateChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Percentage of conversations transferred to another agent or department",
-                      scope: "Both" as const,
-                      trendData: metrics.transferRateTrend,
-                      isUpPositive: false,
-                      valueType: "percentage" as const,
-                    },
-                  };
-                  
-                  const config = configs[widgetId as keyof typeof configs];
-                  if (config) {
-                    return (
-                      <div key={widgetId} className="min-h-[400px]">
-                        <StatWidget
-                          title={config.title}
-                          widgetId={widgetId}
-                          value={config.value}
-                          impact={config.impact}
-                          tooltipText={config.tooltipText}
-                          scope={config.scope}
-                          trendData={config.trendData}
-                          isUpPositive={config.isUpPositive}
-                          valueType={config.valueType}
-                          onMaximize={() => setMaximizedWidget(widgetId)}
-                          onRemove={() => handleRemoveMainWidget(widgetId)}
-                          onDuplicate={() => handleDuplicateWidget(widgetId)}
-                          isDraggable={true}
-                        />
-                      </div>
-                    );
-                  }
-                }
-                
-                return null;
-              })}
-          </div>
-          </SortableContext>
-      
-          {/* Sección 4: Heatmap Widget */}
-          <SortableContext 
-          items={section4Order.filter(id => !removedWidgets.has(id))}
-          strategy={horizontalListSortingStrategy}
-        >
-          <div className="grid gap-3 w-full" style={{ gridTemplateColumns: section4Grid }}>
-            {section4Order
-              .filter(id => !removedWidgets.has(id))
-              .map(widgetId => {
-                if (widgetId === 'heatmap') {
-                  return (
-                    <div key={widgetId} className="min-h-[320px]">
-                      <HeatmapWidget 
-                        data={processHeatmapData(metrics.heatmapData)} 
-                        onMaximize={() => setMaximizedWidget('heatmap')}
-                        onRemove={() => handleRemoveMainWidget('heatmap')}
-                        onDuplicate={() => handleDuplicateWidget('heatmap')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                // Handle other widgets moved to this section - use section's min height
-                if (widgetId === 'sankey') {
-                  return (
-                    <div key={widgetId} className="min-h-[320px]">
-                      <SankeyWidget 
-                        onMaximize={() => setMaximizedWidget('sankey')}
-                        onRemove={() => handleRemoveMainWidget('sankey')}
-                        onDuplicate={() => handleDuplicateWidget('sankey')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'deflection-rate') {
-                  return (
-                    <div key={widgetId} className="min-h-[320px]">
-                      <StatWidget
-                        title="Deflection rate"
-                        widgetId="deflection-rate"
-                        value={metrics.deflectionRate}
-                        impact={{ percentage: metrics.deflectionRateChange, direction: metrics.deflectionRateChange.startsWith('+') ? "up" : "down" }}
-                        tooltipText="Percentage of conversations resolved without agent intervention"
-                        scope="Both"
-                        trendData={metrics.deflectionRateTrend}
-                        isUpPositive={true}
-                        valueType="percentage"
-                        onMaximize={() => setMaximizedWidget('deflection-rate')}
-                        onRemove={() => handleRemoveMainWidget('deflection-rate')}
-                        onDuplicate={() => handleDuplicateWidget('deflection-rate')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                if (widgetId === 'conversation-volume') {
-                  return (
-                    <div key={widgetId} className="min-h-[320px]">
-                      <ConversationVolumeOverTimeWithDot 
-                        metricsData={metrics} 
-                        onMaximize={() => setMaximizedWidget('conversation-volume')}
-                        onRemove={() => handleRemoveMainWidget('conversation-volume')}
-                        onDuplicate={() => handleDuplicateWidget('conversation-volume')}
-                        isDraggable={true}
-                      />
-                    </div>
-                  );
-                }
-                
-                // StatWidgets
-                if (widgetId === 'avg-answer-time' || widgetId === 'avg-handle-time' || 
-                    widgetId === 'avg-first-response-time' || widgetId === 'transfer-rate') {
-                  const configs = {
-                    'avg-answer-time': {
-                      title: "Avg. answer time",
-                      value: metrics.avgAnswerTime,
-                      impact: { percentage: metrics.avgAnswerTimeChange, direction: metrics.avgAnswerTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time taken to answer incoming conversations",
-                      scope: "Both" as const,
-                      trendData: metrics.avgAnswerTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'avg-handle-time': {
-                      title: "Avg. handle time",
-                      value: metrics.avgHandleTime,
-                      impact: { percentage: metrics.avgHandleTimeChange, direction: metrics.avgHandleTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time spent handling each conversation from start to resolution",
-                      scope: "Both" as const,
-                      trendData: metrics.avgHandleTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'avg-first-response-time': {
-                      title: "Avg. first response time",
-                      value: metrics.avgFirstResponseTime,
-                      impact: { percentage: metrics.avgFirstResponseTimeChange, direction: metrics.avgFirstResponseTimeChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Average time until the first response is sent to a customer",
-                      scope: "Digital" as const,
-                      trendData: metrics.avgFirstResponseTimeTrend,
-                      isUpPositive: false,
-                      valueType: "time" as const,
-                    },
-                    'transfer-rate': {
-                      title: "Transfer rate",
-                      value: metrics.transferRate,
-                      impact: { percentage: metrics.transferRateChange, direction: metrics.transferRateChange.startsWith('+') ? "up" as const : "down" as const },
-                      tooltipText: "Percentage of conversations transferred to another agent or department",
-                      scope: "Both" as const,
-                      trendData: metrics.transferRateTrend,
-                      isUpPositive: false,
-                      valueType: "percentage" as const,
-                    },
-                  };
-                  
-                  const config = configs[widgetId as keyof typeof configs];
-                  if (config) {
-                    return (
-                      <div key={widgetId} className="min-h-[320px]">
-                        <StatWidget
-                          title={config.title}
-                          widgetId={widgetId}
-                          value={config.value}
-                          impact={config.impact}
-                          tooltipText={config.tooltipText}
-                          scope={config.scope}
-                          trendData={config.trendData}
-                          isUpPositive={config.isUpPositive}
-                          valueType={config.valueType}
-                          onMaximize={() => setMaximizedWidget(widgetId)}
-                          onRemove={() => handleRemoveMainWidget(widgetId)}
-                          onDuplicate={() => handleDuplicateWidget(widgetId)}
-                          isDraggable={true}
-                        />
-                      </div>
-                    );
-                  }
-                }
-                
-                return null;
-              })}
-          </div>
-          </SortableContext>
-      
-          {/* Secciones insertadas después de Sección 3 */}
-      {insertedSections
-        .filter(section => section.afterSection === 3)
-        .map(section => (
-          <div 
-            key={section.id} 
-            id={section.id}
-            className="grid gap-3 w-full"
-            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))' }}
-          >
-            {section.widgets.map((widget, index) => (
-              <div key={`${section.id}-${widget.id}-${index}`} className="min-h-[320px]">
-                {renderInsertedWidget(widget.id, section.id, index)}
-              </div>
-            ))}
-          </div>
-        ))
-      }
+      )}
       
       {/* Widgets agregados dinámicamente - cada uno en su propia sección */}
       {addedWidgets.map((widget, index) => {

@@ -16,7 +16,7 @@ export function ConversationVolumeWidget() {
     <Widget
       title="Conversation volume over time"
       minColumns={2}
-      minHeight={320}
+      minHeight={260}
       showFilterButton={true}
       showMenuButton={true}
       filterButton={<MenuWithDot onFiltersChange={(count) => console.log(count)} />}
