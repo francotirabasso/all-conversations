@@ -3097,9 +3097,11 @@ export default function Frame2() {
     if (!over) return;
 
     const activeId = String(active.id);
-    const overId = String(over.id);
+    // Normalize 'stack-item-<widgetId>' (from StackItem's useDroppable) back to the plain widget ID
+    const rawOverId = String(over.id);
+    const overId = rawOverId.startsWith('stack-item-') ? rawOverId.slice('stack-item-'.length) : rawOverId;
 
-    console.log('🔄 DragOver:', { activeId, overId, isLibraryItem: active.data.current?.type === 'library-item' });
+    console.log('🔄 DragOver:', { activeId, overId, rawOverId, isLibraryItem: active.data.current?.type === 'library-item' });
 
     // Check if over section boundary
     if (typeof overId === 'string' && overId.startsWith('section-boundary-')) {
@@ -3131,26 +3133,41 @@ export default function Frame2() {
 
     // Check if overId is a widget INSIDE a stack
     let isOverWidgetInStack = false;
-    
+    let containingStack: VerticalStack | undefined;
+
     for (const item of overSection.widgetIds) {
       if (isStack(item) && item.widgetIds.includes(overId)) {
         isOverWidgetInStack = true;
+        containingStack = item;
         break;
       }
     }
 
-    // If hovering over a widget inside a stack, don't show section-level drop indicator
-    // Let VerticalStackContainer handle its own internal drop indicators
-    if (isOverWidgetInStack) {
+    // When hovering a widget inside a stack, check if the pointer is near the left
+    // or right edge of the item (outer 30%). If so, the user wants to drop BESIDE the
+    // stack at the section level — show a section indicator and skip stack-internal logic.
+    if (isOverWidgetInStack && containingStack) {
+      const pointerX = (event.activatorEvent as PointerEvent).clientX + event.delta.x;
+      const itemRect = over.rect;
+      const edgeZone = itemRect.width * 0.30;
+      const isAtRightEdge = pointerX > itemRect.right - edgeZone;
+      const isAtLeftEdge = pointerX < itemRect.left + edgeZone;
+
+      if (isAtRightEdge || isAtLeftEdge) {
+        const stackIndex = overSection.widgetIds.findIndex(
+          item => isStack(item) && (item as VerticalStack).id === containingStack!.id
+        );
+        const indicatorIndex = isAtRightEdge ? stackIndex + 1 : stackIndex;
+        const isValid = canDropInSection(activeId, overSection.id, activeSection?.id);
+        const newDropIndicator = { sectionId: overSection.id, index: indicatorIndex, isValid };
+        setDropIndicator(newDropIndicator);
+        lastDropIndicatorRef.current = newDropIndicator;
+        return;
+      }
+
+      // Pointer is in the inner 40% — let VerticalStackContainer handle internally
       setDropIndicator(null);
       lastDropIndicatorRef.current = null;
-      // Don't return - continue so the rest of the logic can execute
-      // This ensures overId is properly tracked by Dnd-kit
-    }
-
-    // Calculate where to show the drop indicator (for section-level drops)
-    // Skip this if we're over a widget inside a stack
-    if (isOverWidgetInStack) {
       return;
     }
     let overIndex = overSection.widgetIds.findIndex(item => {
@@ -3177,11 +3194,21 @@ export default function Frame2() {
     // Validate if the widget can be dropped here
     const isValid = canDropInSection(activeId, overSection.id, activeSection?.id);
 
-    // If hovering over a stack, show indicator BEFORE the stack
-    // Otherwise, show indicator AFTER the widget
+    // If hovering over a stack, use pointer position to decide before vs after.
+    // Left half → before the stack (overIndex), right half → after the stack (overIndex + 1).
+    // Otherwise show indicator AFTER the widget.
+    let indicatorIndex: number;
+    if (isOverStack && over.rect) {
+      const pointerX = (event.activatorEvent as PointerEvent).clientX + event.delta.x;
+      const stackMidX = over.rect.left + over.rect.width / 2;
+      indicatorIndex = pointerX >= stackMidX ? overIndex + 1 : overIndex;
+    } else {
+      indicatorIndex = overIndex + 1;
+    }
+
     const newDropIndicator = {
       sectionId: overSection.id,
-      index: isOverStack ? overIndex : overIndex + 1,
+      index: indicatorIndex,
       isValid,
     };
     setDropIndicator(newDropIndicator);
@@ -3367,7 +3394,9 @@ export default function Frame2() {
     console.log('❌ Not a library item, continuing with normal widget logic');
 
     const activeId = active.id as string;
-    const overId = over.id as string;
+    // Normalize 'stack-item-<widgetId>' (from StackItem's useDroppable) back to the plain widget ID
+    const rawOverId = over.id as string;
+    const overId = rawOverId.startsWith('stack-item-') ? rawOverId.slice('stack-item-'.length) : rawOverId;
 
     // Helper: Find widget in stacks
     const findWidgetInStacks = (widgetId: string): { section: typeof widgetOrder.sections[0], stack: VerticalStack } | null => {
@@ -3488,6 +3517,13 @@ export default function Frame2() {
       effectiveOverInStack = null;
     }
 
+    // When isDropBesideStack, overId is a widget inside the stack (e.g. 'transfer-rate').
+    // Resolve it to the stack's own ID so section-level findIndex calls work correctly.
+    // Used in Cases 3 and 5.
+    const overIdForLookup = (isDropBesideStack && overInStack)
+      ? overInStack.stack.id
+      : overId;
+
     // Case 1: Moving within the same stack
     if (activeInStack && effectiveOverInStack && activeInStack.stack.id === effectiveOverInStack.stack.id) {
       console.log('📦 Reordering within same stack');
@@ -3536,17 +3572,21 @@ export default function Frame2() {
             // If same section, also add to section here
             if (activeSection.id === overSection.id) {
               const overIndex = widgetIds.findIndex(item => {
-                if (typeof item === 'string') return item === overId;
-                if (isStack(item)) return item.id === overId;
+                if (typeof item === 'string') return item === overIdForLookup;
+                if (isStack(item)) return item.id === overIdForLookup;
                 return false;
               });
-              
+
               // Wrap in stack if small widget
               const itemToInsert = shouldWrapInStack
                 ? { type: 'stack' as const, id: `stack-${Date.now()}`, widgetIds: [activeId] }
                 : activeId;
-              
-              widgetIds.splice(overIndex + 1, 0, itemToInsert);
+
+              // When dropping beside a stack, use the indicator index; otherwise insert after overIndex
+              const insertAt = (isDropBesideStack && currentDropIndicator)
+                ? currentDropIndicator.index
+                : overIndex + 1;
+              widgetIds.splice(insertAt, 0, itemToInsert);
             }
             
             return { ...section, widgetIds };
@@ -3555,18 +3595,22 @@ export default function Frame2() {
           // Add to target section if different
           if (section.id === overSection.id && activeSection.id !== overSection.id) {
             const overIndex = section.widgetIds.findIndex(item => {
-              if (typeof item === 'string') return item === overId;
-              if (isStack(item)) return item.id === overId;
+              if (typeof item === 'string') return item === overIdForLookup;
+              if (isStack(item)) return item.id === overIdForLookup;
               return false;
             });
             const newWidgetIds = [...section.widgetIds];
-            
+
             // Wrap in stack if small widget
             const itemToInsert = shouldWrapInStack
               ? { type: 'stack' as const, id: `stack-${Date.now()}`, widgetIds: [activeId] }
               : activeId;
-            
-            newWidgetIds.splice(overIndex + 1, 0, itemToInsert);
+
+            // When dropping beside a stack, use the indicator index; otherwise insert after overIndex
+            const insertAt = (isDropBesideStack && currentDropIndicator)
+              ? currentDropIndicator.index
+              : overIndex + 1;
+            newWidgetIds.splice(insertAt, 0, itemToInsert);
             return { ...section, widgetIds: newWidgetIds };
           }
           
@@ -3618,23 +3662,33 @@ export default function Frame2() {
         return false;
       });
       const newIndex = activeSection.widgetIds.findIndex(item => {
-        if (typeof item === 'string') return item === overId;
-        if (isStack(item)) return item.id === overId;
+        if (typeof item === 'string') return item === overIdForLookup;
+        if (isStack(item)) return item.id === overIdForLookup;
         return false;
       });
-      const newOrder = arrayMove(activeSection.widgetIds, oldIndex, newIndex);
 
+      // When the drop target is a stack, the indicator tells us before (index=newIndex)
+      // or after (index=newIndex+1). Use it to pick the effective position.
+      const isTargetStack = isStack(activeSection.widgetIds[newIndex]);
+      const indicatorAfterStack = isTargetStack && currentDropIndicator && currentDropIndicator.index > newIndex;
+      const effectiveNewIndex = indicatorAfterStack ? newIndex + 1 : newIndex;
+
+      const newOrder = arrayMove(activeSection.widgetIds, oldIndex, effectiveNewIndex);
       updateSectionOrder(activeSection.id, newOrder);
     } else {
       // Cross-section move
       const overIndex = overSection.widgetIds.findIndex(item => {
-        if (typeof item === 'string') return item === overId;
-        if (isStack(item)) return item.id === overId;
+        if (typeof item === 'string') return item === overIdForLookup;
+        if (isStack(item)) return item.id === overIdForLookup;
         return false;
       });
 
-      // Move widget to new section
-      moveWidgetBetweenSections(activeId, activeSection.id, overSection.id, overIndex + 1);
+      // When dropping onto a stack, use the indicator to decide before or after.
+      const isTargetStack = isStack(overSection.widgetIds[overIndex]);
+      const indicatorBeforeStack = isTargetStack && currentDropIndicator && currentDropIndicator.index <= overIndex;
+      const insertIndex = indicatorBeforeStack ? overIndex : overIndex + 1;
+
+      moveWidgetBetweenSections(activeId, activeSection.id, overSection.id, insertIndex);
     }
   }, [getWidgetSection, widgetOrder, updateSectionOrder, moveWidgetBetweenSections, maxFrUnits, canDropInSection, getWidgetFrUnits, createSectionAtBoundary, setWidgetOrder, handleLibraryWidgetDrop]);
 
@@ -3968,6 +4022,7 @@ export default function Frame2() {
           <VerticalStackContainer
             id={stack.id}
             widgetIds={stack.widgetIds}
+            suppressIndicators={dropIndicator !== null}
             renderWidget={(widgetId: string) => {
               // Render individual widget within stack (without wrapper div)
               const baseWidgetId = getBaseWidgetId(widgetId);

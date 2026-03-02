@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { WIDGET_WEIGHTS } from '../config/widgetWeights';
 
 // Vertical stack structure for stacking widgets
 export interface VerticalStack {
@@ -30,27 +31,23 @@ interface LegacyWidgetOrderState {
   section4Order: string[];
 }
 
-// Default order - Stacks are only used when multiple widgets are actually stacked
-// Single widgets remain standalone to allow proper drop zones between them
+// All 1-FR widgets must always live inside a stack (even if alone).
+// Large widgets (3+ FR) remain standalone.
 export const DEFAULT_ORDER: WidgetOrderState = {
   sections: [
     {
       id: 'section-1',
       widgetIds: [
-        'avg-answer-time',
-        'avg-handle-time',
-        'avg-first-response-time',
+        { type: 'stack', id: 'stack-s1-1', widgetIds: ['avg-answer-time'] },
+        { type: 'stack', id: 'stack-s1-2', widgetIds: ['avg-handle-time'] },
+        { type: 'stack', id: 'stack-s1-3', widgetIds: ['avg-first-response-time'] },
       ],
       order: 0,
     },
     {
       id: 'section-2',
       widgetIds: [
-        {
-          type: 'stack',
-          id: 'stack-default-1',
-          widgetIds: ['transfer-rate', 'deflection-rate'],
-        },
+        { type: 'stack', id: 'stack-default-1', widgetIds: ['transfer-rate', 'deflection-rate'] },
         'conversation-volume',
       ],
       order: 1,
@@ -67,6 +64,27 @@ export const DEFAULT_ORDER: WidgetOrderState = {
     },
   ],
 };
+
+// Normalize a loaded state so that any standalone 1-FR widget is wrapped in a stack.
+// This acts as a migration for session/localStorage data saved before the rule was enforced.
+function normalizeOrder(order: WidgetOrderState): WidgetOrderState {
+  const ts = Date.now();
+  let idx = 0;
+  return {
+    sections: order.sections.map(section => ({
+      ...section,
+      widgetIds: section.widgetIds.map(item => {
+        if (typeof item !== 'string') return item; // already a stack
+        const baseId = item.split('__')[0];
+        const weight = WIDGET_WEIGHTS[baseId] ?? 1;
+        if (weight === 1) {
+          return { type: 'stack' as const, id: `stack-auto-${ts}-${idx++}`, widgetIds: [item] };
+        }
+        return item;
+      }),
+    })),
+  };
+}
 
 const STORAGE_KEY = 'dashboard-widget-order';
 
@@ -124,7 +142,7 @@ export function useWidgetOrder(currentViewId?: string) {
           if (currentView?.widgetOrder) {
             // Check if needs migration
             if (isLegacyFormat(currentView.widgetOrder)) {
-              const migrated = migrateToSections(currentView.widgetOrder);
+              const migrated = normalizeOrder(migrateToSections(currentView.widgetOrder));
               setWidgetOrder(migrated);
 
               // Save migrated version back to localStorage
@@ -135,7 +153,7 @@ export function useWidgetOrder(currentViewId?: string) {
               );
               localStorage.setItem('saved-views', JSON.stringify(updatedViews));
             } else {
-              setWidgetOrder(currentView.widgetOrder);
+              setWidgetOrder(normalizeOrder(currentView.widgetOrder));
             }
             return;
           }
@@ -153,11 +171,11 @@ export function useWidgetOrder(currentViewId?: string) {
 
         // Check if needs migration
         if (isLegacyFormat(parsed)) {
-          const migrated = migrateToSections(parsed);
+          const migrated = normalizeOrder(migrateToSections(parsed));
           setWidgetOrder(migrated);
           sessionStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
         } else {
-          setWidgetOrder(parsed);
+          setWidgetOrder(normalizeOrder(parsed));
         }
       } else {
         setWidgetOrder(DEFAULT_ORDER);
@@ -263,10 +281,10 @@ export function useWidgetOrder(currentViewId?: string) {
         return section;
       }
       
-      // Check inside stacks
+      // Check stacks (by stack ID) and widgets inside stacks
       for (const item of section.widgetIds) {
         if (typeof item === 'object' && item.type === 'stack') {
-          if (item.widgetIds.includes(widgetId)) {
+          if (item.id === widgetId || item.widgetIds.includes(widgetId)) {
             return section;
           }
         }

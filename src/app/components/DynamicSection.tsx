@@ -79,10 +79,13 @@ export const DynamicSection = React.memo<DynamicSectionProps>(({
         {/* Render widgets or stacks */}
         {visibleWidgets.map((item, index) => {
           const itemId = getItemId(item);
+          // Stacks are not directly draggable — only their contained widgets are.
+          const itemIsDraggable = !(isStack?.(item));
           return (
             <SortableWidget
               key={itemId}
               id={itemId}
+              isDraggable={itemIsDraggable}
               gridColumnSpan={spans[itemId] || getWidgetColumnSpan(item, maxFrUnits)}
               dropIndicator={shouldShowIndicator(section.id, index + 1) ? (
                 <DropIndicator isValid={dropIndicator?.isValid ?? true} />

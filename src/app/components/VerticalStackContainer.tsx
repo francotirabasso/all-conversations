@@ -9,16 +9,18 @@ interface VerticalStackContainerProps {
   widgetIds: string[];
   renderWidget: (widgetId: string) => React.ReactNode;
   isDraggable?: boolean;
+  /** When true, suppress the internal hover indicators (section-level drop is taking priority). */
+  suppressIndicators?: boolean;
 }
 
-function StackItem({ 
-  id, 
-  children, 
-  showDropIndicator
-}: { 
-  id: string; 
+function StackItem({
+  id,
+  children,
+  suppressIndicators,
+}: {
+  id: string;
   children: React.ReactNode;
-  showDropIndicator?: boolean;
+  suppressIndicators?: boolean;
 }) {
   const {
     attributes,
@@ -51,7 +53,7 @@ function StackItem({
   };
 
   const isOverThis = over?.id === `stack-item-${id}` || over?.id === id;
-  const showIndicator = active && (isDroppableOver || isOverThis) && !isDragging;
+  const showIndicator = !suppressIndicators && active && (isDroppableOver || isOverThis) && !isDragging;
 
   return (
     <div className="relative flex-1 min-h-0">
@@ -76,13 +78,14 @@ export function VerticalStackContainer({
   widgetIds,
   renderWidget,
   isDraggable = true,
+  suppressIndicators = false,
 }: VerticalStackContainerProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: `stack-droppable-${id}`,
   });
 
   return (
-    <div 
+    <div
       ref={setNodeRef}
       className="flex flex-col gap-3 h-full w-full"
       data-stack-id={id}
@@ -91,10 +94,10 @@ export function VerticalStackContainer({
       {isDraggable ? (
         <SortableContext items={widgetIds} strategy={verticalListSortingStrategy}>
           {widgetIds.map((widgetId) => (
-            <StackItem 
+            <StackItem
               key={widgetId}
               id={widgetId}
-              showDropIndicator={false}
+              suppressIndicators={suppressIndicators}
             >
               {renderWidget(widgetId)}
             </StackItem>
