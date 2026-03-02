@@ -1,19 +1,25 @@
 import React, { createRef } from 'react';
-import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable';
-import { Section } from '../hooks/useWidgetOrder';
+import { SortableContext } from '@dnd-kit/sortable';
+import { Section, WidgetOrStack } from '../hooks/useWidgetOrder';
 import { useSectionGridSpans } from '../hooks/useSectionGridSpans';
 import { calculateGridColumns } from '../utils/gridCalculator';
 
+// Custom sorting strategy that prevents DOM reordering
+const noOpSortingStrategy = () => {
+  return null; // Return null to prevent any sorting/reordering
+};
+
 interface DynamicSectionProps {
   section: Section;
-  visibleWidgets: string[];
+  visibleWidgets: WidgetOrStack[];
   maxFrUnits: number;
-  renderWidget: (widgetId: string, sectionId: string, spans: Record<string, number>) => React.ReactNode;
+  renderWidget: (item: WidgetOrStack, sectionId: string, spans: Record<string, number>) => React.ReactNode;
   shouldShowIndicator: (sectionId: string, index: number) => boolean;
   dropIndicator: { sectionId: string; index: number; isValid: boolean } | null;
   DropIndicator: React.ComponentType<{ isValid: boolean }>;
   SortableWidget: React.ComponentType<any>;
-  getWidgetColumnSpan: (widgetId: string, maxFrUnits: number) => number;
+  getWidgetColumnSpan: (item: WidgetOrStack, maxFrUnits: number) => number;
+  isStack?: (item: WidgetOrStack) => boolean;
 }
 
 export const DynamicSection = React.memo<DynamicSectionProps>(({
@@ -26,13 +32,33 @@ export const DynamicSection = React.memo<DynamicSectionProps>(({
   DropIndicator,
   SortableWidget,
   getWidgetColumnSpan,
+  isStack,
 }) => {
   const sectionRef = React.useMemo(() => createRef<HTMLDivElement>(), []);
   const sectionGrid = calculateGridColumns(visibleWidgets, maxFrUnits);
-  const spans = useSectionGridSpans(visibleWidgets, sectionRef);
+  
+  // Create a map of widget IDs for spans (extract IDs from stacks)
+  const widgetIdsForSpans = React.useMemo(() => {
+    return visibleWidgets.map(item => {
+      if (typeof item === 'string') return item;
+      return item.id; // Use stack ID for span calculation
+    });
+  }, [visibleWidgets]);
+  
+  const spans = useSectionGridSpans(widgetIdsForSpans, sectionRef);
+
+  // Get unique ID for sortable context
+  const getItemId = (item: WidgetOrStack): string => {
+    return typeof item === 'string' ? item : item.id;
+  };
+
+  const sortableIds = React.useMemo(() => 
+    visibleWidgets.map(getItemId),
+    [visibleWidgets]
+  );
 
   return (
-    <SortableContext items={section.widgetIds} strategy={horizontalListSortingStrategy}>
+    <SortableContext items={sortableIds} strategy={noOpSortingStrategy}>
       <div
         ref={sectionRef}
         className="grid gap-3 w-full"
@@ -50,19 +76,22 @@ export const DynamicSection = React.memo<DynamicSectionProps>(({
           </div>
         )}
 
-        {/* Render widgets */}
-        {visibleWidgets.map((widgetId, index) => (
-          <SortableWidget
-            key={widgetId}
-            id={widgetId}
-            gridColumnSpan={spans[widgetId] || getWidgetColumnSpan(widgetId, maxFrUnits)}
-            dropIndicator={shouldShowIndicator(section.id, index + 1) ? (
-              <DropIndicator isValid={dropIndicator?.isValid ?? true} />
-            ) : undefined}
-          >
-            {renderWidget(widgetId, section.id, spans)}
-          </SortableWidget>
-        ))}
+        {/* Render widgets or stacks */}
+        {visibleWidgets.map((item, index) => {
+          const itemId = getItemId(item);
+          return (
+            <SortableWidget
+              key={itemId}
+              id={itemId}
+              gridColumnSpan={spans[itemId] || getWidgetColumnSpan(item, maxFrUnits)}
+              dropIndicator={shouldShowIndicator(section.id, index + 1) ? (
+                <DropIndicator isValid={dropIndicator?.isValid ?? true} />
+              ) : undefined}
+            >
+              {renderWidget(item, section.id, spans)}
+            </SortableWidget>
+          );
+        })}
       </div>
     </SortableContext>
   );

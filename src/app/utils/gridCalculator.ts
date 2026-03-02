@@ -1,4 +1,5 @@
-import { getWidgetWeight } from '../config/widgetWeights';
+import { getWidgetWeight, getItemWeight } from '../config/widgetWeights';
+import { WidgetOrStack } from '../hooks/useWidgetOrder';
 
 // Minimum width per FR unit before wrapping occurs (180px)
 const WIDGET_MIN_WIDTH_PX = 180;
@@ -8,7 +9,7 @@ const WIDGET_MIN_WIDTH_PX = 180;
  * Returns a wrapping-friendly grid definition using auto-fit
  * Creates as many 180px columns as fit, widgets wrap when they exceed available space
  */
-export function calculateGridColumns(widgetIds: string[], maxFrUnits: number): string {
+export function calculateGridColumns(widgetIds: WidgetOrStack[], maxFrUnits: number): string {
   if (widgetIds.length === 0) return '1fr';
   if (widgetIds.length === 1) return '1fr';
 
@@ -19,12 +20,12 @@ export function calculateGridColumns(widgetIds: string[], maxFrUnits: number): s
 }
 
 /**
- * Get the grid-column span value for a widget
- * Widgets span according to their FR weight
+ * Get the grid-column span value for a widget or stack
+ * Items span according to their FR weight
  * No clamping - this allows proper wrapping when span exceeds available columns
  */
-export function getWidgetColumnSpan(widgetId: string, maxFrUnits: number): number {
-  const weight = getWidgetWeight(widgetId);
+export function getWidgetColumnSpan(item: WidgetOrStack, maxFrUnits: number): number {
+  const weight = getItemWeight(item);
   return weight; // Return raw weight for proper wrapping behavior
 }
 

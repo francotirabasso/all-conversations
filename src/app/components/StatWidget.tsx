@@ -382,8 +382,8 @@ export function StatWidget({
     // Normal mode: responsive layout with trend chart
     <div ref={containerRef} className="flex h-full max-h-full overflow-hidden min-h-px min-w-px relative w-full">
       {/* Always use layout without chart - spark charts hidden */}
-      <div className="flex flex-row items-end h-full w-full">
-        <div className="content-end flex flex-wrap items-end justify-between pb-[12px] pt-px px-[12px] relative size-full">
+      <div className="flex flex-row items-center h-full w-full">
+        <div className="flex flex-wrap items-center justify-between px-[12px] relative size-full">
           <div className="content-stretch flex flex-col gap-[2px] items-start relative shrink-0">
             <div className="content-stretch flex gap-px items-end relative shrink-0">
               <p className="font-['SF_Pro:Medium',sans-serif] font-[510] leading-none relative shrink-0 text-[27px] text-black">

@@ -1,9 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 
+// Vertical stack structure for stacking widgets
+export interface VerticalStack {
+  type: 'stack';
+  id: string;
+  widgetIds: string[];
+}
+
+// Widget can be either a string ID or a stack
+export type WidgetOrStack = string | VerticalStack;
+
 // New dynamic section structure
 export interface Section {
   id: string;
-  widgetIds: string[];
+  widgetIds: WidgetOrStack[];
   order: number;
 }
 
@@ -20,7 +30,8 @@ interface LegacyWidgetOrderState {
   section4Order: string[];
 }
 
-// Default order - migrated to new format
+// Default order - Stacks are only used when multiple widgets are actually stacked
+// Single widgets remain standalone to allow proper drop zones between them
 export const DEFAULT_ORDER: WidgetOrderState = {
   sections: [
     {
@@ -29,14 +40,17 @@ export const DEFAULT_ORDER: WidgetOrderState = {
         'avg-answer-time',
         'avg-handle-time',
         'avg-first-response-time',
-        'transfer-rate',
       ],
       order: 0,
     },
     {
       id: 'section-2',
       widgetIds: [
-        'deflection-rate',
+        {
+          type: 'stack',
+          id: 'stack-default-1',
+          widgetIds: ['transfer-rate', 'deflection-rate'],
+        },
         'conversation-volume',
       ],
       order: 1,
@@ -241,11 +255,21 @@ export function useWidgetOrder(currentViewId?: string) {
     });
   }, [cleanupEmptySections]);
 
-  // Get section for a widget ID
+  // Get section for a widget ID (searches both top-level and inside stacks)
   const getWidgetSection = useCallback((widgetId: string): Section | null => {
     for (const section of widgetOrder.sections) {
+      // Check top-level widgets
       if (section.widgetIds.includes(widgetId)) {
         return section;
+      }
+      
+      // Check inside stacks
+      for (const item of section.widgetIds) {
+        if (typeof item === 'object' && item.type === 'stack') {
+          if (item.widgetIds.includes(widgetId)) {
+            return section;
+          }
+        }
       }
     }
     return null;
@@ -290,6 +314,89 @@ export function useWidgetOrder(currentViewId?: string) {
     setWidgetOrder(newOrder);
   }, []);
 
+  // Helper: Check if a widget or stack is a stack
+  const isStack = useCallback((item: WidgetOrStack): item is VerticalStack => {
+    return typeof item === 'object' && item.type === 'stack';
+  }, []);
+
+  // Helper: Create a new stack with widget IDs
+  const createStack = useCallback((widgetIds: string[]): VerticalStack => {
+    return {
+      type: 'stack',
+      id: `stack-${Date.now()}`,
+      widgetIds,
+    };
+  }, []);
+
+  // Add widget to existing stack
+  const addToStack = useCallback((sectionId: string, stackId: string, widgetId: string, index?: number) => {
+    setWidgetOrder(prev => {
+      const sections = prev.sections.map(section => {
+        if (section.id === sectionId) {
+          const widgetIds = section.widgetIds.map(item => {
+            if (isStack(item) && item.id === stackId) {
+              const newWidgetIds = [...item.widgetIds];
+              if (index !== undefined) {
+                newWidgetIds.splice(index, 0, widgetId);
+              } else {
+                newWidgetIds.push(widgetId);
+              }
+              return { ...item, widgetIds: newWidgetIds };
+            }
+            return item;
+          });
+          return { ...section, widgetIds };
+        }
+        return section;
+      });
+      return { sections };
+    });
+  }, [isStack]);
+
+  // Remove widget from stack
+  const removeFromStack = useCallback((sectionId: string, stackId: string, widgetId: string) => {
+    setWidgetOrder(prev => {
+      const sections = prev.sections.map(section => {
+        if (section.id === sectionId) {
+          const widgetIds = section.widgetIds.map(item => {
+            if (isStack(item) && item.id === stackId) {
+              return { ...item, widgetIds: item.widgetIds.filter(id => id !== widgetId) };
+            }
+            return item;
+          }).filter(item => {
+            // Remove empty stacks
+            if (isStack(item)) {
+              return item.widgetIds.length > 0;
+            }
+            return true;
+          });
+          return { ...section, widgetIds };
+        }
+        return section;
+      });
+      return { sections: cleanupEmptySections(sections) };
+    });
+  }, [isStack, cleanupEmptySections]);
+
+  // Reorder widgets within a stack
+  const reorderStack = useCallback((sectionId: string, stackId: string, newOrder: string[]) => {
+    setWidgetOrder(prev => {
+      const sections = prev.sections.map(section => {
+        if (section.id === sectionId) {
+          const widgetIds = section.widgetIds.map(item => {
+            if (isStack(item) && item.id === stackId) {
+              return { ...item, widgetIds: newOrder };
+            }
+            return item;
+          });
+          return { ...section, widgetIds };
+        }
+        return section;
+      });
+      return { sections };
+    });
+  }, [isStack]);
+
   return {
     widgetOrder,
     setWidgetOrder: setWidgetOrderDirect,
@@ -300,5 +407,10 @@ export function useWidgetOrder(currentViewId?: string) {
     getWidgetSection,
     createSection,
     removeSection,
+    isStack,
+    createStack,
+    addToStack,
+    removeFromStack,
+    reorderStack,
   };
 }

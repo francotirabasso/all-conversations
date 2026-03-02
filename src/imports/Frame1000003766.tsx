@@ -20,7 +20,7 @@ import { processHeatmapData, generateMockHeatmapData } from "@/app/utils/heatmap
 import { WidgetModal } from "@/app/components/WidgetModal";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, DragOverEvent, DragStartEvent, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { useWidgetOrder, type Section } from "@/app/hooks/useWidgetOrder";
+import { useWidgetOrder, type Section, type WidgetOrStack, type VerticalStack } from "@/app/hooks/useWidgetOrder";
 import { useBreakpoint } from "@/app/hooks/useBreakpoint";
 import { getWidgetWeight, calculateSectionWeight, canAddToSection } from "@/app/config/widgetWeights";
 import { calculateGridColumns, getWidgetColumnSpan } from "@/app/utils/gridCalculator";
@@ -29,6 +29,7 @@ import { HorizontalDropIndicator } from "@/app/components/HorizontalDropIndicato
 import { SectionBoundary } from "@/app/components/SectionBoundary";
 import { SortableWidget } from "@/app/components/SortableWidget";
 import { DynamicSection } from "@/app/components/DynamicSection";
+import { VerticalStackContainer } from "@/app/components/VerticalStackContainer";
 
 // Global styles for checkbox, input focus colors, and scrollbars
 const styleEl = document.createElement('style');
@@ -2862,13 +2863,34 @@ export default function Frame2() {
   const [removedWidgets, setRemovedWidgets] = useState<Set<string>>(new Set());
 
   // Hook para manejar el orden de widgets con persistencia
-  const { widgetOrder, setWidgetOrder, updateSectionOrder, resetOrder, getCurrentOrder, moveWidgetBetweenSections, getWidgetSection, createSection } = useWidgetOrder(currentViewId);
+  const { 
+    widgetOrder, 
+    setWidgetOrder, 
+    updateSectionOrder, 
+    resetOrder, 
+    getCurrentOrder, 
+    moveWidgetBetweenSections, 
+    getWidgetSection, 
+    createSection,
+    isStack,
+    createStack,
+    addToStack,
+    removeFromStack,
+    reorderStack,
+  } = useWidgetOrder(currentViewId);
 
   // Hook para detectar breakpoint y MAX_FR_UNITS
   const { maxFrUnits } = useBreakpoint();
 
   // Estado para el indicador de drop (línea azul/roja) - ahora usa sectionId
   const [dropIndicator, setDropIndicator] = useState<{
+    sectionId: string;
+    index: number;
+    isValid: boolean;
+  } | null>(null);
+
+  // Ref to store the last valid dropIndicator before it gets cleared
+  const lastDropIndicatorRef = useRef<{
     sectionId: string;
     index: number;
     isValid: boolean;
@@ -2904,6 +2926,49 @@ export default function Frame2() {
     });
   }, [widgetOrder, maxFrUnits]);
 
+  // Clean up sections with no visible widgets
+  useEffect(() => {
+    const sectionsToClean = widgetOrder.sections.filter(section => {
+      const visibleWidgets = section.widgetIds.filter(item => {
+        if (typeof item === 'string') {
+          return !removedWidgets.has(item);
+        }
+        // It's a stack - check if it has any visible widgets
+        if (isStack(item)) {
+          return item.widgetIds.some(widgetId => !removedWidgets.has(widgetId));
+        }
+        return true;
+      });
+      return visibleWidgets.length === 0;
+    });
+
+    if (sectionsToClean.length > 0) {
+      console.log('🧹 Cleaning up empty sections:', sectionsToClean.map(s => s.id));
+      
+      setWidgetOrder(prev => {
+        const nonEmpty = prev.sections.filter(section => {
+          const visibleWidgets = section.widgetIds.filter(item => {
+            if (typeof item === 'string') {
+              return !removedWidgets.has(item);
+            }
+            if (isStack(item)) {
+              return item.widgetIds.some(widgetId => !removedWidgets.has(widgetId));
+            }
+            return true;
+          });
+          return visibleWidgets.length > 0;
+        });
+
+        // Ensure at least 1 section exists
+        const cleanedSections = nonEmpty.length === 0 
+          ? [{ id: `section-${Date.now()}`, widgetIds: [], order: 0 }]
+          : nonEmpty.map((section, index) => ({ ...section, order: index }));
+
+        return { sections: cleanedSections };
+      });
+    }
+  }, [removedWidgets, widgetOrder.sections, setWidgetOrder, isStack]);
+
   // Get FR units for a specific widget - use centralized weight configuration
   // Helper function to extract base widget ID from unique ID
   const getBaseWidgetId = (widgetId: string): string => {
@@ -2921,9 +2986,32 @@ export default function Frame2() {
     const section = widgetOrder.sections.find(s => s.id === sectionId);
     if (!section) return 0;
 
-    const activeWidgets = section.widgetIds.filter(id => !removedWidgets.has(id));
-    const filteredWidgets = excludeWidgetId ? activeWidgets.filter(id => id !== excludeWidgetId) : activeWidgets;
-    const total = filteredWidgets.reduce((total, widgetId) => total + getWidgetFrUnits(widgetId), 0);
+    const activeWidgets = section.widgetIds.filter(item => {
+      if (typeof item === 'string') {
+        return !removedWidgets.has(item);
+      }
+      // It's a stack - keep it
+      return true;
+    });
+    
+    const filteredWidgets = excludeWidgetId 
+      ? activeWidgets.filter(item => {
+          if (typeof item === 'string') return item !== excludeWidgetId;
+          if (isStack(item)) return item.id !== excludeWidgetId;
+          return true;
+        })
+      : activeWidgets;
+    
+    const total = filteredWidgets.reduce((total, item) => {
+      if (typeof item === 'string') {
+        return total + getWidgetFrUnits(item);
+      }
+      if (isStack(item)) {
+        // Stack weight is based on first widget
+        return total + getWidgetFrUnits(item.widgetIds[0] || '');
+      }
+      return total;
+    }, 0);
 
     console.log('🧮 calculateUsedUnits:', {
       sectionId,
@@ -2935,7 +3023,7 @@ export default function Frame2() {
     });
 
     return total;
-  }, [widgetOrder, removedWidgets, getWidgetFrUnits]);
+  }, [widgetOrder, removedWidgets, getWidgetFrUnits, isStack]);
 
   // Check if a widget can be dropped in a section
   const canDropInSection = useCallback((widgetId: string, targetSectionId: string, sourceSectionId?: string): boolean => {
@@ -2998,19 +3086,18 @@ export default function Frame2() {
   // Handler for drag over - show drop indicator without moving widgets
   const handleGlobalDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
+    
+    console.log('🔄 DragOver RAW:', { 
+      hasOver: !!over, 
+      overId: over?.id, 
+      activeId: active.id,
+      overData: over?.data?.current 
+    });
+    
+    if (!over) return;
 
-    if (!over || active.id === over.id) {
-      setDropIndicator(null);
-      setSectionBoundaryIndicator(null);
-      return;
-    }
-
-    // Extract actual widget ID for library items
-    const activeId = active.data.current?.type === 'library-item'
-      ? active.data.current.widgetId
-      : (active.id as string);
-
-    const overId = over.id as string;
+    const activeId = String(active.id);
+    const overId = String(over.id);
 
     console.log('🔄 DragOver:', { activeId, overId, isLibraryItem: active.data.current?.type === 'library-item' });
 
@@ -3036,35 +3123,70 @@ export default function Frame2() {
       : getWidgetSection(activeId);
 
     // Find which section the over widget belongs to
-    const overSection = getWidgetSection(overId);
+    let overSection = getWidgetSection(overId);
     if (!overSection) {
       console.warn('❌ Over section not found for:', overId);
       return;
     }
 
-    console.log('📍 Sections:', { activeSectionId: activeSection?.id, overSectionId: overSection.id });
+    // Check if overId is a widget INSIDE a stack
+    let isOverWidgetInStack = false;
+    
+    for (const item of overSection.widgetIds) {
+      if (isStack(item) && item.widgetIds.includes(overId)) {
+        isOverWidgetInStack = true;
+        break;
+      }
+    }
 
-    // Calculate where to show the drop indicator
-    const overIndex = overSection.widgetIds.indexOf(overId);
+    // If hovering over a widget inside a stack, don't show section-level drop indicator
+    // Let VerticalStackContainer handle its own internal drop indicators
+    if (isOverWidgetInStack) {
+      setDropIndicator(null);
+      lastDropIndicatorRef.current = null;
+      // Don't return - continue so the rest of the logic can execute
+      // This ensures overId is properly tracked by Dnd-kit
+    }
+
+    // Calculate where to show the drop indicator (for section-level drops)
+    // Skip this if we're over a widget inside a stack
+    if (isOverWidgetInStack) {
+      return;
+    }
+    let overIndex = overSection.widgetIds.findIndex(item => {
+      if (typeof item === 'string') {
+        return item === overId;
+      }
+      if (isStack(item)) {
+        // Only match if overId is the stack itself, not a widget inside it
+        return item.id === overId;
+      }
+      return false;
+    });
+
+    // If not found, don't show drop indicator
+    if (overIndex === -1) {
+      setDropIndicator(null);
+      return;
+    }
+
+    // Check if the over item is a stack
+    const overItem = overSection.widgetIds[overIndex];
+    const isOverStack = typeof overItem !== 'string' && isStack(overItem);
 
     // Validate if the widget can be dropped here
     const isValid = canDropInSection(activeId, overSection.id, activeSection?.id);
 
-    console.log('✨ Setting drop indicator:', {
+    // If hovering over a stack, show indicator BEFORE the stack
+    // Otherwise, show indicator AFTER the widget
+    const newDropIndicator = {
       sectionId: overSection.id,
-      index: overIndex + 1,
+      index: isOverStack ? overIndex : overIndex + 1,
       isValid,
-      activeUnits: getWidgetFrUnits(activeId),
-      usedUnits: calculateUsedUnits(overSection.id),
-      maxUnits: maxFrUnits
-    });
-
-    // Show indicator at the position after the over widget
-    setDropIndicator({
-      sectionId: overSection.id,
-      index: overIndex + 1,
-      isValid,
-    });
+    };
+    setDropIndicator(newDropIndicator);
+    // Store in ref so we can access it in handleGlobalDragEnd
+    lastDropIndicatorRef.current = newDropIndicator;
   }, [getWidgetSection, widgetOrder, maxFrUnits, canDropInSection, getWidgetFrUnits, calculateUsedUnits]);
 
   // Function to create a new section at a boundary
@@ -3073,8 +3195,6 @@ export default function Frame2() {
     sourceSectionId: string,
     boundaryPosition: number
   ) => {
-    console.log('🆕 Creating section at boundary:', { widgetId, sourceSectionId, boundaryPosition });
-
     setWidgetOrder(prev => {
       let sections = [...prev.sections];
 
@@ -3090,10 +3210,22 @@ export default function Frame2() {
         sections = sections.filter(s => s.widgetIds.length > 0);
       }
 
-      // Create new section
+      // Check if widget is small (1 fr unit) and should be wrapped in a stack
+      const widgetUnits = getWidgetFrUnits(widgetId);
+      const isSmallWidget = widgetUnits === 1;
+
+      // Create new section with widget wrapped in stack if it's small
+      const newWidgetIds: WidgetOrStack[] = isSmallWidget
+        ? [{
+            type: 'stack' as const,
+            id: `stack-${Date.now()}`,
+            widgetIds: [widgetId],
+          }]
+        : [widgetId];
+
       const newSection: Section = {
         id: `section-${Date.now()}`,
-        widgetIds: [widgetId],
+        widgetIds: newWidgetIds,
         order: boundaryPosition,
       };
 
@@ -3107,7 +3239,7 @@ export default function Frame2() {
 
       return { sections };
     });
-  }, [setWidgetOrder]);
+  }, [setWidgetOrder, getWidgetFrUnits]);
 
   // Global drag end handler - handles both intra and inter-section dragging
   // Handler for dropping library widgets
@@ -3206,11 +3338,17 @@ export default function Frame2() {
       typeDirect: (active.data as any)?.type
     });
 
+    // Use the ref to get the last valid dropIndicator before it was cleared
+    const currentDropIndicator = lastDropIndicatorRef.current;
+
     // Clear drop indicators and active widget
     setDropIndicator(null);
     setSectionBoundaryIndicator(null);
     setActiveId(null);
     setDraggingFromLibrary(false);
+    
+    // Clear the ref after using it
+    lastDropIndicatorRef.current = null;
 
     if (!over) {
       console.log('❌ No over target');
@@ -3231,21 +3369,44 @@ export default function Frame2() {
     const activeId = active.id as string;
     const overId = over.id as string;
 
+    // Helper: Find widget in stacks
+    const findWidgetInStacks = (widgetId: string): { section: typeof widgetOrder.sections[0], stack: VerticalStack } | null => {
+      for (const section of widgetOrder.sections) {
+        for (const item of section.widgetIds) {
+          if (isStack(item) && item.widgetIds.includes(widgetId)) {
+            return { section, stack: item };
+          }
+        }
+      }
+      return null;
+    };
+
     // Handle section boundary drop (create new section)
     if (typeof overId === 'string' && overId.startsWith('section-boundary-')) {
       const boundaryPosition = parseInt(overId.split('-')[2]);
-      const activeSection = getWidgetSection(activeId);
+      
+      // Check if widget is in a stack first
+      const activeInStack = findWidgetInStacks(activeId);
+      let activeSection = getWidgetSection(activeId);
+      
+      // If not found directly, it might be in a stack
+      if (!activeSection && activeInStack) {
+        activeSection = activeInStack.section;
+      }
 
       if (!activeSection) {
-        console.warn('❌ Active section not found');
         return;
       }
 
       // Validate: widget fits in new section
       const widgetUnits = getWidgetFrUnits(activeId);
       if (widgetUnits > maxFrUnits) {
-        console.warn('❌ Widget too large for new section');
         return;
+      }
+
+      // If widget is in a stack, remove it from the stack first
+      if (activeInStack) {
+        removeFromStack(activeSection.id, activeInStack.stack.id, activeId);
       }
 
       // Create new section at boundary
@@ -3253,8 +3414,20 @@ export default function Frame2() {
       return;
     }
 
+    // Check if active widget is in a stack
+    const activeInStack = findWidgetInStacks(activeId);
+    
+    // Check if over widget is in a stack
+    const overInStack = findWidgetInStacks(overId);
+
     // Find which section the active widget belongs to
-    const activeSection = getWidgetSection(activeId);
+    let activeSection = getWidgetSection(activeId);
+    
+    // If not found in sections directly, it might be in a stack
+    if (!activeSection && activeInStack) {
+      activeSection = activeInStack.section;
+    }
+    
     if (!activeSection) {
       console.warn('❌ Active section not found');
       return;
@@ -3267,20 +3440,167 @@ export default function Frame2() {
     }
 
     // Find which section the over widget belongs to
-    const overSection = getWidgetSection(overId);
+    let overSection = getWidgetSection(overId);
+    
+    // If not found in sections directly, it might be in a stack
+    if (!overSection && overInStack) {
+      overSection = overInStack.section;
+    }
+    
     if (!overSection) {
       console.warn('❌ Over section not found');
       return;
     }
 
     console.log('✅ Moving from', activeSection.id, 'to', overSection.id);
-    console.log('🔍 About to validate:', {
-      activeId,
-      overSectionId: overSection.id,
-      activeSectionId: activeSection.id,
-      isSameSection: activeSection.id === overSection.id
+    console.log('🔍 Stack info:', {
+      activeInStack: !!activeInStack,
+      overInStack: !!overInStack,
+      activeStackId: activeInStack?.stack.id,
+      overStackId: overInStack?.stack.id
     });
 
+    // Check if dropIndicator is showing a drop BESIDE a stack (not inside it)
+    // If overId is a widget inside a stack, but dropIndicator.index points to beside the stack,
+    // then treat this as a section-to-section drop, not a stack drop
+    const isDropBesideStack = overInStack && currentDropIndicator && (() => {
+      const stackIndex = overSection.widgetIds.findIndex(item => 
+        isStack(item) && item.id === overInStack.stack.id
+      );
+      // If dropIndicator.index is stackIndex + 1, it means drop AFTER the stack (beside it)
+      // If dropIndicator.index is stackIndex, it means drop BEFORE the stack (beside it)
+      return currentDropIndicator.index === stackIndex || currentDropIndicator.index === stackIndex + 1;
+    })();
+
+    console.log('🎯 Drop beside stack check:', {
+      isDropBesideStack,
+      dropIndicatorIndex: currentDropIndicator?.index,
+      overInStack: !!overInStack,
+      currentDropIndicator
+    });
+
+    // If dropping beside a stack (not inside), treat as section-to-section movement
+    // Use a new variable to override the behavior
+    let effectiveOverInStack = overInStack;
+    if (isDropBesideStack) {
+      console.log('📍 Dropping BESIDE stack, treating as section-to-section movement');
+      // Override to null to force section-to-section logic
+      effectiveOverInStack = null;
+    }
+
+    // Case 1: Moving within the same stack
+    if (activeInStack && effectiveOverInStack && activeInStack.stack.id === effectiveOverInStack.stack.id) {
+      console.log('📦 Reordering within same stack');
+      const oldIndex = activeInStack.stack.widgetIds.indexOf(activeId);
+      const newIndex = activeInStack.stack.widgetIds.indexOf(overId);
+      const newOrder = arrayMove(activeInStack.stack.widgetIds, oldIndex, newIndex);
+      reorderStack(activeSection.id, activeInStack.stack.id, newOrder);
+      return;
+    }
+
+    // Case 2: Moving from stack to another stack
+    if (activeInStack && effectiveOverInStack && activeInStack.stack.id !== effectiveOverInStack.stack.id) {
+      console.log('📦➡️📦 Moving from one stack to another');
+      // Remove from source stack
+      removeFromStack(activeSection.id, activeInStack.stack.id, activeId);
+      // Add to target stack at the position after overId
+      const targetIndex = effectiveOverInStack.stack.widgetIds.indexOf(overId) + 1;
+      addToStack(overSection.id, effectiveOverInStack.stack.id, activeId, targetIndex);
+      return;
+    }
+
+    // Case 3: Moving from stack to section (removing from stack)
+    if (activeInStack && !effectiveOverInStack) {
+      // Check if widget is small (1 fr unit) - should be wrapped in a new stack
+      const widgetUnits = getWidgetFrUnits(activeId);
+      const shouldWrapInStack = widgetUnits === 1;
+      
+      // Do both operations in a single state update
+      setWidgetOrder(prev => {
+        const sections = prev.sections.map(section => {
+          // Remove from source stack
+          if (section.id === activeSection.id) {
+            const widgetIds = section.widgetIds.map(item => {
+              if (isStack(item) && item.id === activeInStack.stack.id) {
+                return { ...item, widgetIds: item.widgetIds.filter(id => id !== activeId) };
+              }
+              return item;
+            }).filter(item => {
+              // Remove empty stacks
+              if (isStack(item)) {
+                return item.widgetIds.length > 0;
+              }
+              return true;
+            });
+            
+            // If same section, also add to section here
+            if (activeSection.id === overSection.id) {
+              const overIndex = widgetIds.findIndex(item => {
+                if (typeof item === 'string') return item === overId;
+                if (isStack(item)) return item.id === overId;
+                return false;
+              });
+              
+              // Wrap in stack if small widget
+              const itemToInsert = shouldWrapInStack
+                ? { type: 'stack' as const, id: `stack-${Date.now()}`, widgetIds: [activeId] }
+                : activeId;
+              
+              widgetIds.splice(overIndex + 1, 0, itemToInsert);
+            }
+            
+            return { ...section, widgetIds };
+          }
+          
+          // Add to target section if different
+          if (section.id === overSection.id && activeSection.id !== overSection.id) {
+            const overIndex = section.widgetIds.findIndex(item => {
+              if (typeof item === 'string') return item === overId;
+              if (isStack(item)) return item.id === overId;
+              return false;
+            });
+            const newWidgetIds = [...section.widgetIds];
+            
+            // Wrap in stack if small widget
+            const itemToInsert = shouldWrapInStack
+              ? { type: 'stack' as const, id: `stack-${Date.now()}`, widgetIds: [activeId] }
+              : activeId;
+            
+            newWidgetIds.splice(overIndex + 1, 0, itemToInsert);
+            return { ...section, widgetIds: newWidgetIds };
+          }
+          
+          return section;
+        });
+        
+        // Clean up empty sections
+        const nonEmpty = sections.filter(s => s.widgetIds.length > 0);
+        const cleanedSections = nonEmpty.length === 0 
+          ? [{ id: `section-${Date.now()}`, widgetIds: [], order: 0 }]
+          : nonEmpty.map((section, index) => ({ ...section, order: index }));
+        
+        return { sections: cleanedSections };
+      });
+      return;
+    }
+
+    // Case 4: Moving from section to stack (adding to stack)
+    if (!activeInStack && effectiveOverInStack) {
+      console.log('📄➡️📦 Moving from section to stack');
+      // Remove from source section
+      const filteredWidgets = activeSection.widgetIds.filter(item => {
+        if (typeof item === 'string') return item !== activeId;
+        return true;
+      });
+      updateSectionOrder(activeSection.id, filteredWidgets);
+      
+      // Add to target stack
+      const targetIndex = effectiveOverInStack.stack.widgetIds.indexOf(overId) + 1;
+      addToStack(overSection.id, effectiveOverInStack.stack.id, activeId, targetIndex);
+      return;
+    }
+
+    // Case 5: Normal section-to-section movement (no stacks involved)
     // Validate if the drop is allowed
     const isValidDrop = canDropInSection(activeId, overSection.id, activeSection.id);
     console.log('📋 Validation result:', isValidDrop);
@@ -3292,14 +3612,26 @@ export default function Frame2() {
 
     // Same section - just reorder
     if (activeSection.id === overSection.id) {
-      const oldIndex = activeSection.widgetIds.indexOf(activeId);
-      const newIndex = activeSection.widgetIds.indexOf(overId);
+      const oldIndex = activeSection.widgetIds.findIndex(item => {
+        if (typeof item === 'string') return item === activeId;
+        if (isStack(item)) return item.id === activeId;
+        return false;
+      });
+      const newIndex = activeSection.widgetIds.findIndex(item => {
+        if (typeof item === 'string') return item === overId;
+        if (isStack(item)) return item.id === overId;
+        return false;
+      });
       const newOrder = arrayMove(activeSection.widgetIds, oldIndex, newIndex);
 
       updateSectionOrder(activeSection.id, newOrder);
     } else {
       // Cross-section move
-      const overIndex = overSection.widgetIds.indexOf(overId);
+      const overIndex = overSection.widgetIds.findIndex(item => {
+        if (typeof item === 'string') return item === overId;
+        if (isStack(item)) return item.id === overId;
+        return false;
+      });
 
       // Move widget to new section
       moveWidgetBetweenSections(activeId, activeSection.id, overSection.id, overIndex + 1);
@@ -3573,11 +3905,8 @@ export default function Frame2() {
   };
 
   // Render full widget with all configurations
-  const renderWidget = (widgetId: string, sectionId: string, sectionSpans: Record<string, number>) => {
-    // Extract base widget ID from unique ID
-    const baseWidgetId = getBaseWidgetId(widgetId);
-
-    // StatWidgets configuration (use baseWidgetId for lookup)
+  const renderWidget = (item: WidgetOrStack, sectionId: string, sectionSpans: Record<string, number>) => {
+    // StatWidgets configuration - defined at the top so it's accessible everywhere
     const statWidgetConfig: Record<string, any> = {
       'avg-answer-time': {
         title: "Avg. answer time",
@@ -3630,6 +3959,49 @@ export default function Frame2() {
         valueType: "percentage" as const,
       },
     };
+
+    // Handle stack rendering
+    if (isStack(item)) {
+      const stack = item as VerticalStack;
+      return (
+        <div className="h-full">
+          <VerticalStackContainer
+            id={stack.id}
+            widgetIds={stack.widgetIds}
+            renderWidget={(widgetId: string) => {
+              // Render individual widget within stack (without wrapper div)
+              const baseWidgetId = getBaseWidgetId(widgetId);
+              if (statWidgetConfig[baseWidgetId]) {
+                const config = statWidgetConfig[baseWidgetId];
+                return (
+                  <StatWidget
+                    title={config.title}
+                    widgetId={widgetId}
+                    value={config.value}
+                    impact={config.impact}
+                    tooltipText={config.tooltipText}
+                    scope={config.scope}
+                    trendData={config.trendData}
+                    isUpPositive={config.isUpPositive}
+                    valueType={config.valueType}
+                    onMaximize={() => setMaximizedWidget(widgetId)}
+                    onRemove={() => removeFromStack(sectionId, stack.id, widgetId)}
+                    onDuplicate={() => handleDuplicateWidget(widgetId)}
+                    isDraggable={false}
+                  />
+                );
+              }
+              return <div>Unknown widget in stack: {widgetId}</div>;
+            }}
+            isDraggable={true}
+          />
+        </div>
+      );
+    }
+
+    // Handle regular widget rendering
+    const widgetId = item as string;
+    const baseWidgetId = getBaseWidgetId(widgetId);
 
     // Render StatWidget if it's in the config (use baseWidgetId for lookup)
     if (statWidgetConfig[baseWidgetId]) {
@@ -3799,13 +4171,15 @@ export default function Frame2() {
 
             return (
               <React.Fragment key={section.id}>
-                {/* Section boundary above */}
-                <SectionBoundary
-                  position={sectionIndex}
-                  showIndicator={sectionBoundaryIndicator?.position === sectionIndex}
-                  isValid={sectionBoundaryIndicator?.isValid ?? true}
-                  isDragging={!!activeId}
-                />
+                {/* Section boundary before first section */}
+                {sectionIndex === 0 && (
+                  <SectionBoundary
+                    position={0}
+                    showIndicator={sectionBoundaryIndicator?.position === 0}
+                    isValid={sectionBoundaryIndicator?.isValid ?? true}
+                    isDragging={!!activeId}
+                  />
+                )}
 
                 {/* Section content */}
                 <DynamicSection
@@ -3818,17 +4192,16 @@ export default function Frame2() {
                   DropIndicator={DropIndicator}
                   SortableWidget={SortableWidget}
                   getWidgetColumnSpan={getWidgetColumnSpan}
+                  isStack={isStack}
                 />
 
-                {/* Section boundary below (after last section) */}
-                {sectionIndex === widgetOrder.sections.length - 1 && (
-                  <SectionBoundary
-                    position={sectionIndex + 1}
-                    showIndicator={sectionBoundaryIndicator?.position === sectionIndex + 1}
-                    isValid={sectionBoundaryIndicator?.isValid ?? true}
-                    isDragging={!!activeId}
-                  />
-                )}
+                {/* Section boundary after each section */}
+                <SectionBoundary
+                  position={sectionIndex + 1}
+                  showIndicator={sectionBoundaryIndicator?.position === sectionIndex + 1}
+                  isValid={sectionBoundaryIndicator?.isValid ?? true}
+                  isDragging={!!activeId}
+                />
               </React.Fragment>
             );
           })}

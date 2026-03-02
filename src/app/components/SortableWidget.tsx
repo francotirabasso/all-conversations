@@ -10,8 +10,6 @@ interface SortableWidgetProps {
 }
 
 export function SortableWidget({ id, children, dropIndicator, gridColumnSpan }: SortableWidgetProps) {
-  console.log('🔵 SortableWidget RENDER:', { id, hasDropIndicator: !!dropIndicator, dropIndicatorType: dropIndicator ? typeof dropIndicator : 'undefined' });
-
   const {
     attributes,
     listeners,
@@ -20,26 +18,20 @@ export function SortableWidget({ id, children, dropIndicator, gridColumnSpan }: 
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({ 
+    id,
+    animateLayoutChanges: () => false,
+  });
 
-  // Only apply transform to the dragging widget, not to others
-  // This prevents widgets from moving to "make space" during drag
-  const style = {
-    transform: isDragging ? CSS.Transform.toString(transform) : 'translate3d(0, 0, 0)',
-    transition: isDragging ? transition : 'none',
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.5 : 1,
-    width: '100%',
-    minWidth: 0, // Allow grid to shrink the widget if needed
     ...(gridColumnSpan && { gridColumn: `span ${gridColumnSpan}` }),
   };
 
-  if (dropIndicator) {
-    console.log('📦 SortableWidget HAS dropIndicator:', { id, hasIndicator: !!dropIndicator });
-  }
-
   return (
     <div ref={setNodeRef} style={style} {...attributes} className="relative group">
-      {/* Drag handle bar - only this can be used to drag the widget */}
       <div
         ref={setActivatorNodeRef}
         {...listeners}
