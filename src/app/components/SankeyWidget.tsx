@@ -1639,7 +1639,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
 
           {/* Popover Content */}
           <div
-            className="fixed z-[9999]"
+            className="fixed z-[10001]"
             style={{
               left: `${selectedNodeForDetails.position.x}px`,
               top: `${selectedNodeForDetails.position.y}px`,
