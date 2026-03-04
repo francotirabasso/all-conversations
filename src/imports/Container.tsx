@@ -286,10 +286,9 @@ function TabButton({ label, isActive, onClick }: { label: string; isActive: bool
 }
 
 function DetailRow({ label, value, icon }: { label: string; value: number; icon?: string }) {
-  // Determine which icon to show based on the icon prop
-  const showPhone = icon === '📞';
-  const showMonitor = icon === '💬';
-  
+  const showPhone = icon === '📞' || icon === 'both';
+  const showMonitor = icon === '💬' || icon === 'both';
+
   return (
     <div className="flex items-center justify-between py-2.5 px-4">
       <div className="flex items-center gap-2">
@@ -355,13 +354,14 @@ function TabsContent({ tabs }: { tabs: TabData[] }) {
   );
 }
 
-function HierarchicalDetailRow({ item, isChild }: { item: DetailItem; isChild?: boolean }) {
-  const showPhone = item.icon === '📞';
-  const showMonitor = item.icon === '💬';
-  
+function HierarchicalDetailRow({ item, depth = 0 }: { item: DetailItem; depth?: number }) {
+  const showPhone = item.icon === '📞' || item.icon === 'both';
+  const showMonitor = item.icon === '💬' || item.icon === 'both';
+  const paddingClass = depth === 0 ? 'px-4' : depth === 1 ? 'pl-8 pr-4' : 'pl-12 pr-4';
+
   return (
     <>
-      <div className={`flex items-center justify-between py-2.5 ${isChild ? 'pl-8 pr-4' : 'px-4'}`}>
+      <div className={`flex items-center justify-between py-2.5 ${paddingClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-['SF_Pro:Light',sans-serif] font-light text-[13px] text-[#535353]">{item.label}</span>
           {showPhone && <Phone />}
@@ -370,7 +370,7 @@ function HierarchicalDetailRow({ item, isChild }: { item: DetailItem; isChild?: 
         <span className="font-['SF_Pro:Light',sans-serif] font-light text-[13px] text-[#535353]">{item.value}</span>
       </div>
       {item.children && item.children.map((child, index) => (
-        <HierarchicalDetailRow key={index} item={child} isChild={true} />
+        <HierarchicalDetailRow key={index} item={child} depth={depth + 1} />
       ))}
     </>
   );

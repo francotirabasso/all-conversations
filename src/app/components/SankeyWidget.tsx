@@ -16,34 +16,21 @@ const sankeyData: SankeyData = {
     {"id": "answered_b", "label": "Answered"},
     {"id": "conv_ai_d", "label": "Conversation by AI"},
     {"id": "conv_human_b", "label": "Conversation by Human agents"},
-    {"id": "unresolved_v", "label": "Unresolved conversations"},
-    {"id": "resolved_v", "label": "Resolved conversations"},
     {"id": "callback_req_v", "label": "Callback requested"},
     {"id": "unanswered_b", "label": "Unanswered"},
     {"id": "missed", "label": "Missed"},
     {"id": "missed_voicemails", "label": "Voicemails"},
     {"id": "queue_timeout", "label": "Queue timeout"},
     {"id": "agent_closed", "label": "Agent closed"},
-    {"id": "customer_timeout", "label": "Customer timeout"},
-    {"id": "customer_closed", "label": "Customer closed"},
     {"id": "agent_timeout", "label": "Agent timeout"},
-    {"id": "other_missed", "label": "Other missed"},
+    {"id": "other_missed", "label": "Missed without voicemails"},
     {"id": "abandoned", "label": "Abandoned"},
-    {"id": "abandoned_queue_b", "label": "Abandoned queue by customer"},
+    {"id": "abandoned_queue_b", "label": "Abandoned queue"},
     {"id": "abandoned_rang_v", "label": "Abandoned rang"},
     {"id": "abandoned_other_b", "label": "Other abandoned"},
     {"id": "unanswered_transferred_v", "label": "Unanswered transferred calls"},
-    {"id": "router_transfer_v", "label": "Router transfer"},
-    {"id": "auto_transfer_v", "label": "Auto transfer"},
-    {"id": "forward_transfer_v", "label": "Forward transfer"},
-    {"id": "dtmf_transfer_v", "label": "DTMF transfer"},
-    {"id": "scripted_ivr_transfer_v", "label": "Scripted IVR transfer"},
     {"id": "call_messages", "label": "Call messages"},
     {"id": "other_voicemails", "label": "Other voicemails"},
-    {"id": "direct_voicemail_v", "label": "Direct to voicemail"},
-    {"id": "inqueue_voicemail_v", "label": "In queue voicemail"},
-    {"id": "dtmf_voicemail_v", "label": "DTMF voicemail"},
-    {"id": "transfer_voicemail_v", "label": "Transfer voicemail"},
     {"id": "spam_calls", "label": "Spam calls"},
     {"id": "outbound", "label": "Outbound"},
     {"id": "initiated", "label": "Initiated"},
@@ -51,8 +38,8 @@ const sankeyData: SankeyData = {
     {"id": "cancelled", "label": "Cancelled calls"},
     {"id": "digital_conversations", "label": "Digital conversations"},
     {"id": "agent_cancelled", "label": "Agent cancelled"},
-    {"id": "system_timeout_cancel", "label": "System timeout"},
-    {"id": "customer_declined", "label": "Customer Declined"},
+    {"id": "system_timeout_cancel", "label": "Other cancelled calls"},
+    {"id": "customer_declined", "label": "Customer Declined/Missed"},
     {"id": "callback_attempts", "label": "Callback attempts"},
     {"id": "successful_callbacks", "label": "Successful callbacks"},
     {"id": "unsuccessful_callbacks", "label": "Unsuccessful callbacks"},
@@ -64,16 +51,12 @@ const sankeyData: SankeyData = {
     {"source": "inbound", "target": "answered_b", "value": 40000},
     {"source": "answered_b", "target": "conv_ai_d", "value": 15000},
     {"source": "answered_b", "target": "conv_human_b", "value": 25000},
-    {"source": "conv_human_b", "target": "unresolved_v", "value": 5000},
-    {"source": "conv_human_b", "target": "resolved_v", "value": 20000},
     {"source": "inbound", "target": "callback_req_v", "value": 5000},
     {"source": "inbound", "target": "unanswered_b", "value": 25000},
-    {"source": "unanswered_b", "target": "missed", "value": 11000},
+    {"source": "unanswered_b", "target": "missed", "value": 8500},
     {"source": "missed", "target": "missed_voicemails", "value": 3000},
     {"source": "missed", "target": "queue_timeout", "value": 2500},
     {"source": "missed", "target": "agent_closed", "value": 1500},
-    {"source": "missed", "target": "customer_timeout", "value": 1500},
-    {"source": "missed", "target": "customer_closed", "value": 1000},
     {"source": "missed", "target": "agent_timeout", "value": 500},
     {"source": "missed", "target": "other_missed", "value": 1000},
     {"source": "unanswered_b", "target": "abandoned", "value": 8000},
@@ -81,17 +64,8 @@ const sankeyData: SankeyData = {
     {"source": "abandoned", "target": "abandoned_rang_v", "value": 2000},
     {"source": "abandoned", "target": "abandoned_other_b", "value": 1000},
     {"source": "unanswered_b", "target": "unanswered_transferred_v", "value": 3000},
-    {"source": "unanswered_transferred_v", "target": "router_transfer_v", "value": 800},
-    {"source": "unanswered_transferred_v", "target": "auto_transfer_v", "value": 800},
-    {"source": "unanswered_transferred_v", "target": "forward_transfer_v", "value": 600},
-    {"source": "unanswered_transferred_v", "target": "dtmf_transfer_v", "value": 400},
-    {"source": "unanswered_transferred_v", "target": "scripted_ivr_transfer_v", "value": 400},
     {"source": "unanswered_b", "target": "call_messages", "value": 1000},
     {"source": "unanswered_b", "target": "other_voicemails", "value": 1000},
-    {"source": "other_voicemails", "target": "direct_voicemail_v", "value": 500},
-    {"source": "other_voicemails", "target": "inqueue_voicemail_v", "value": 200},
-    {"source": "other_voicemails", "target": "dtmf_voicemail_v", "value": 150},
-    {"source": "other_voicemails", "target": "transfer_voicemail_v", "value": 150},
     {"source": "unanswered_b", "target": "spam_calls", "value": 1000},
     {"source": "conversations_b", "target": "outbound", "value": 30000},
     {"source": "outbound", "target": "initiated", "value": 20000},
@@ -113,8 +87,8 @@ const sankeyData: SankeyData = {
 const COLORS = {
   primaryNode: '#6EA6E2',
   primaryNodeHover: '#5A91CC',
-  link: '#F9F9F9',
-  linkHover: '#E5E5E5',
+  link: '#EAF2FA',
+  linkHover: '#D0E6F5',
   text: '#333333',
   textSecondary: '#6B7280',
   background: '#FFFFFF'
@@ -279,11 +253,26 @@ function calculateNodeLayouts(
     nodesByLevel.set(level, arr);
   }
 
+  const maxLevel = Math.max(...Array.from(nodesByLevel.keys()));
+
+  // Helper: compute placed height of a node (height + padding)
+  const nodeSlotHeight = (nodeId: string) => {
+    const value = nodeValues[nodeId] ?? 1;
+    const height = Math.max(value * valueScale, LAYOUT.minNodeHeight);
+    const padding = Math.max(LAYOUT.minNodePadding, LAYOUT.labelHeight - height / 2);
+    return { height, slotHeight: height + padding };
+  };
+
+  // Helper: compute total height a group of nodes will occupy
+  const groupTotalHeight = (ids: string[]) =>
+    ids.reduce((sum, id) => sum + nodeSlotHeight(id).slotHeight, 0);
+
   // Position nodes with dynamic padding + stable ordering (group by parent)
   Array.from(nodesByLevel.entries())
     .sort(([a], [b]) => a - b)
     .forEach(([level, nodeIds]) => {
       const x = level * LAYOUT.levelSpacing + LAYOUT.diagramPaddingX;
+      const isLastLevel = level === maxLevel;
 
       const nodesByParent = new Map<string, string[]>();
       const rootNodes: string[] = [];
@@ -308,37 +297,55 @@ function calculateNodeLayouts(
         nodesByParent.set(parent, ids);
       }
 
-      const sortedIds: string[] = [...rootNodes];
-      for (const ids of nodesByParent.values()) {
-        sortedIds.push(...ids);
-      }
-
       let currentY = LAYOUT.diagramPaddingY;
 
-      for (const nodeId of sortedIds) {
+      const placeNode = (nodeId: string, y: number) => {
         const node = data.nodes.find(n => n.id === nodeId);
-        if (!node) continue;
-
+        if (!node) return;
         const value = nodeValues[nodeId] ?? 1;
         const height = Math.max(value * valueScale, LAYOUT.minNodeHeight);
         const percentage = nodePercentages[nodeId] ?? 100;
+        layouts.push({ id: nodeId, label: node.label || nodeId, x, y, height, level, value, percentage });
+      };
 
-        layouts.push({
-          id: nodeId,
-          label: node.label || nodeId,
-          x,
-          y: currentY,
-          height,
-          level,
-          value,
-          percentage
-        });
+      if (isLastLevel && nodesByParent.size > 0) {
+        // Place root nodes (if any) sequentially
+        for (const nodeId of rootNodes) {
+          placeNode(nodeId, currentY);
+          currentY += nodeSlotHeight(nodeId).slotHeight;
+        }
 
-        const dynamicPadding = Math.max(
-          LAYOUT.minNodePadding,
-          LAYOUT.labelHeight - height / 2
-        );
-        currentY += height + dynamicPadding;
+        // Sort parent groups by parent's Y position
+        const sortedParentEntries = Array.from(nodesByParent.entries())
+          .sort(([a], [b]) => {
+            const la = layouts.find(l => l.id === a);
+            const lb = layouts.find(l => l.id === b);
+            return (la?.y ?? 0) - (lb?.y ?? 0);
+          });
+
+        for (const [parent, ids] of sortedParentEntries) {
+          const parentLayout = layouts.find(l => l.id === parent);
+          if (parentLayout) {
+            const groupHeight = groupTotalHeight(ids);
+            const parentMidY = parentLayout.y + parentLayout.height / 2;
+            // Center the group on the parent's midpoint, but never go above currentY
+            const centeredStart = parentMidY - groupHeight / 2;
+            currentY = Math.max(currentY, centeredStart);
+          }
+          for (const nodeId of ids) {
+            placeNode(nodeId, currentY);
+            currentY += nodeSlotHeight(nodeId).slotHeight;
+          }
+        }
+      } else {
+        const sortedIds: string[] = [...rootNodes];
+        for (const ids of nodesByParent.values()) {
+          sortedIds.push(...ids);
+        }
+        for (const nodeId of sortedIds) {
+          placeNode(nodeId, currentY);
+          currentY += nodeSlotHeight(nodeId).slotHeight;
+        }
       }
     });
 
@@ -666,10 +673,9 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   // Get tab data for specific nodes
   const getNodeTabData = (nodeId: string, totalValue: number) => {
     if (nodeId === 'inbound') {
-      // Calculate proportional values that sum to totalValue
       const overviewTotal = 742;
-      const routingTotal = 742;
-      
+      const routingTotal = 485; // Direct(205)+voicemail(37)+message(93)+OtherCC(37)+teamMember(37)+IVR(37)+OtherDigital(39)
+
       return [
         {
           name: 'Overview',
@@ -684,46 +690,103 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         {
           name: 'Routing',
           items: [
-            { label: 'Direct', value: Math.round(totalValue * (205 / routingTotal)), icon: '📞' },
+            { label: 'Direct', value: Math.round(totalValue * (205 / routingTotal)), icon: 'both' },
             { label: 'To voicemail', value: Math.round(totalValue * (37 / routingTotal)), icon: '📞' },
             { label: 'To message', value: Math.round(totalValue * (93 / routingTotal)), icon: '📞' },
             { label: 'Other CC or Department', value: Math.round(totalValue * (37 / routingTotal)), icon: '📞' },
             { label: 'To a team member', value: Math.round(totalValue * (37 / routingTotal)), icon: '📞' },
             { label: 'IVR', value: Math.round(totalValue * (37 / routingTotal)), icon: '📞' },
-            { label: 'AI Agent', value: Math.round(totalValue * (102 / routingTotal)), icon: '💬' },
-            { label: 'Last Agent', value: Math.round(totalValue * (102 / routingTotal)), icon: '💬' },
-            { label: 'High priority channel', value: Math.round(totalValue * (53 / routingTotal)), icon: '💬' },
-            { label: 'Pullback', value: Math.round(totalValue * (39 / routingTotal)), icon: '💬' },
+            { label: 'Other digital', value: Math.round(totalValue * (39 / routingTotal)), icon: '💬' },
           ]
         }
       ];
     }
+
+    if (nodeId === 'unanswered_transferred_v') {
+      const overviewTotal = 742; // Open(400) + Closed(342)
+      const routingTotal = 742; // Router(200)+Auto(200)+Forward(150)+Scripted(150)+DTMF(42)
+
+      return [
+        {
+          name: 'Overview',
+          items: [
+            { label: 'Open hours', value: Math.round(totalValue * (400 / overviewTotal)) },
+            { label: 'Closed', value: Math.round(totalValue * (342 / overviewTotal)) },
+          ]
+        },
+        {
+          name: 'Routing',
+          items: [
+            { label: 'Router transfer', value: Math.round(totalValue * (200 / routingTotal)) },
+            { label: 'Auto-transfer', value: Math.round(totalValue * (200 / routingTotal)) },
+            { label: 'Forward transfer', value: Math.round(totalValue * (150 / routingTotal)) },
+            { label: 'Scripted IVR transfer', value: Math.round(totalValue * (150 / routingTotal)) },
+            { label: 'DTMF transfer', value: Math.round(totalValue * (42 / routingTotal)) },
+          ]
+        }
+      ];
+    }
+
+    if (nodeId === 'other_voicemails') {
+      const overviewTotal = 742; // Open(400) + Closed(342)
+      const routingTotal = 872; // Direct(400)+InQueue(37)+DTMF(93)+Transfer(342)
+
+      return [
+        {
+          name: 'Overview',
+          items: [
+            { label: 'Open hours', value: Math.round(totalValue * (400 / overviewTotal)) },
+            { label: 'Closed', value: Math.round(totalValue * (342 / overviewTotal)) },
+          ]
+        },
+        {
+          name: 'Routing',
+          items: [
+            { label: 'Direct to voicemail', value: Math.round(totalValue * (400 / routingTotal)) },
+            { label: 'In queue voicemail', value: Math.round(totalValue * (37 / routingTotal)) },
+            { label: 'DTMF voicemail', value: Math.round(totalValue * (93 / routingTotal)) },
+            { label: 'Transfer voicemail', value: Math.round(totalValue * (342 / routingTotal)) },
+          ]
+        }
+      ];
+    }
+
     return undefined;
   };
 
   // Get detail data for specific nodes (hierarchical, no tabs)
   const getNodeDetailData = (nodeId: string, totalValue: number) => {
     if (nodeId === 'abandoned') {
-      // Calculate proportional values so that voice + digital = totalValue
       const voiceBase = 400;
       const digitalBase = 42;
       const totalBase = voiceBase + digitalBase; // 442
-      
+
       const voiceValue = Math.round(totalValue * (voiceBase / totalBase));
       const digitalValue = Math.round(totalValue * (digitalBase / totalBase));
-      
-      // Calculate children so that open + closed = voiceValue
+
       const openBase = 300;
-      const closedBase = 93;
-      const voiceChildrenTotal = openBase + closedBase; // 393
-      
+      const closedBase = 100;
+      const voiceChildrenTotal = openBase + closedBase; // 400
+
+      const openValue = Math.round(voiceValue * (openBase / voiceChildrenTotal));
+      const shortBase = 150;
+      const otherBase = 150;
+      const openChildrenTotal = shortBase + otherBase; // 300
+
       return [
         {
           label: 'Voice abandoned',
           value: voiceValue,
           icon: '📞',
           children: [
-            { label: 'Open hours', value: Math.round(voiceValue * (openBase / voiceChildrenTotal)) },
+            {
+              label: 'Open hours',
+              value: openValue,
+              children: [
+                { label: 'Short abandoned', value: Math.round(openValue * (shortBase / openChildrenTotal)) },
+                { label: 'Other abandoned', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
+              ]
+            },
             { label: 'Closed hours', value: Math.round(voiceValue * (closedBase / voiceChildrenTotal)) }
           ]
         },
@@ -763,42 +826,6 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           label: 'Digital missed',
           value: digitalValue,
           icon: '💬'
-        }
-      ];
-    }
-    
-    if (nodeId === 'unanswered_transferred_v') {
-      // Simple structure with two items, no hierarchy
-      const openBase = 400;
-      const closedBase = 342;
-      const totalBase = openBase + closedBase; // 742
-      
-      return [
-        {
-          label: 'Open hours',
-          value: Math.round(totalValue * (openBase / totalBase))
-        },
-        {
-          label: 'Closed',
-          value: Math.round(totalValue * (closedBase / totalBase))
-        }
-      ];
-    }
-    
-    if (nodeId === 'other_voicemails') {
-      // Same simple structure as unanswered_transferred_v
-      const openBase = 400;
-      const closedBase = 342;
-      const totalBase = openBase + closedBase; // 742
-      
-      return [
-        {
-          label: 'Open hours',
-          value: Math.round(totalValue * (openBase / totalBase))
-        },
-        {
-          label: 'Closed',
-          value: Math.round(totalValue * (closedBase / totalBase))
         }
       ];
     }
@@ -905,31 +932,42 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     }
     
     if (nodeId === 'abandoned_other_b') {
-      // Other abandoned - with indented children (same structure as abandoned_rang_v)
       const openBase = 400;
       const closedBase = 342;
       const totalBase = openBase + closedBase; // 742
-      
+
       const openValue = Math.round(totalValue * (openBase / totalBase));
-      
-      // Children of "Open hours"
+
       const shortBase = 250;
       const otherBase = 150;
       const openChildrenTotal = shortBase + otherBase; // 400
-      
+
       return [
         {
           label: 'Open hours',
           value: openValue,
           children: [
             { label: 'Short abandoned', value: Math.round(openValue * (shortBase / openChildrenTotal)) },
-            { label: 'Other', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
+            { label: 'Other abandoned', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
           ]
         },
         {
           label: 'Closed',
           value: Math.round(totalValue * (closedBase / totalBase))
         }
+      ];
+    }
+
+    if (nodeId === 'connected') {
+      const manualBase = 300;
+      const coldBase = 200;
+      const nonBase = 242;
+      const totalBase = manualBase + coldBase + nonBase; // 742
+
+      return [
+        { label: 'Manual transfer', value: Math.round(totalValue * (manualBase / totalBase)) },
+        { label: 'Cold transfer', value: Math.round(totalValue * (coldBase / totalBase)) },
+        { label: 'Non transferred', value: Math.round(totalValue * (nonBase / totalBase)) },
       ];
     }
     
@@ -945,7 +983,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           value: Math.round(totalValue * (declinedBase / totalBase))
         },
         {
-          label: 'No answer',
+          label: 'Ring no answer',
           value: Math.round(totalValue * (noAnswerBase / totalBase))
         }
       ];
@@ -966,7 +1004,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       
       return [
         {
-          label: 'Timeout',
+          label: 'Timeout on agent extension',
           value: Math.round(totalValue * (timeoutBase / totalBase))
         },
         {
@@ -1565,8 +1603,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               value={selectedNodeForDetails.value}
               tabs={getNodeTabData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               details={getNodeDetailData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
-              showChart={!['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'abandoned_other_b', 'missed_by_customer_v', 'missed_by_cc_v'].includes(selectedNodeForDetails.nodeId)}
-              iconType={['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'abandoned_other_b', 'missed_by_customer_v', 'missed_by_cc_v'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' : 'both'}
+              showChart={!['call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'connected'].includes(selectedNodeForDetails.nodeId)}
+              iconType={['other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'abandoned_other_b', 'missed_by_customer_v', 'missed_by_cc_v', 'connected'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' : 'both'}
             />
           </div>
         </>,
