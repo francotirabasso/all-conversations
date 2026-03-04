@@ -1009,9 +1009,9 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const totalBase = manualBase + coldBase + nonBase; // 742
 
       return [
-        { label: 'Manual transfer', value: Math.round(totalValue * (manualBase / totalBase)) },
-        { label: 'Cold transfer', value: Math.round(totalValue * (coldBase / totalBase)) },
-        { label: 'Non transferred', value: Math.round(totalValue * (nonBase / totalBase)) },
+        { label: 'Manual transfer', value: Math.round(totalValue * (manualBase / totalBase)), icon: '📞' },
+        { label: 'Cold transfer', value: Math.round(totalValue * (coldBase / totalBase)), icon: 'both' },
+        { label: 'Non transferred', value: Math.round(totalValue * (nonBase / totalBase)), icon: 'both' },
       ];
     }
     
@@ -1685,10 +1685,10 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               value={selectedNodeForDetails.value}
               tabs={getNodeTabData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               details={getNodeDetailData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
-              showChart={!['call_messages', 'spam_calls', 'connected', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'unanswered_transferred_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v'].includes(selectedNodeForDetails.nodeId)}
+              showChart={!['call_messages', 'spam_calls', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'unanswered_transferred_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v'].includes(selectedNodeForDetails.nodeId)}
               iconType={
                 ['conv_ai_d', 'queue_timeout', 'agent_closed', 'agent_timeout'].includes(selectedNodeForDetails.nodeId) ? 'monitor-only' :
-                ['other_voicemails', 'call_messages', 'spam_calls', 'missed_by_customer_v', 'missed_by_cc_v', 'connected', 'missed_voicemails', 'other_missed', 'callback_req_v', 'unanswered_transferred_v', 'abandoned_rang_v'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' :
+                ['other_voicemails', 'call_messages', 'spam_calls', 'missed_by_customer_v', 'missed_by_cc_v', 'missed_voicemails', 'other_missed', 'callback_req_v', 'unanswered_transferred_v', 'abandoned_rang_v'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' :
                 'both'
               }
             />
