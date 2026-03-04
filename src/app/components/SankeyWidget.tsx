@@ -750,6 +750,30 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       ];
     }
 
+    if (nodeId === 'conv_human_b') {
+      const overviewTotal = 742; // Customer timeout(400) + Customer closed(300) + Calls by human agent(42)
+      const routingTotal = 742; // Manual transfer(400) + Cold transfer(300) + Non transferred(42)
+
+      return [
+        {
+          name: 'Overview',
+          items: [
+            { label: 'Customer timeout', value: Math.round(totalValue * (400 / overviewTotal)), icon: '💬' },
+            { label: 'Customer closed', value: Math.round(totalValue * (300 / overviewTotal)), icon: '💬' },
+            { label: 'Calls by human agent', value: Math.round(totalValue * (42 / overviewTotal)), icon: '📞' },
+          ]
+        },
+        {
+          name: 'Routing',
+          items: [
+            { label: 'Manual transfer', value: Math.round(totalValue * (400 / routingTotal)), icon: '📞' },
+            { label: 'Cold transfer', value: Math.round(totalValue * (300 / routingTotal)), icon: 'both' },
+            { label: 'Non transferred', value: Math.round(totalValue * (42 / routingTotal)), icon: 'both' },
+          ]
+        }
+      ];
+    }
+
     if (nodeId === 'unanswered_transferred_v') {
       const overviewTotal = 742; // Open(400) + Closed(342)
       const routingTotal = 742; // Router(200)+Auto(200)+Forward(150)+Scripted(150)+DTMF(42)
@@ -817,6 +841,9 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const voiceChildrenTotal = openBase + closedBase; // 400
 
       const openValue = Math.round(voiceValue * (openBase / voiceChildrenTotal));
+      const shortBase = 150;
+      const otherBase = 150;
+      const openChildrenTotal = shortBase + otherBase; // 300
 
       return [
         {
@@ -824,7 +851,14 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           value: voiceValue,
           icon: '📞',
           children: [
-            { label: 'Open hours', value: openValue },
+            {
+              label: 'Open hours',
+              value: openValue,
+              children: [
+                { label: 'Short abandoned', value: Math.round(openValue * (shortBase / openChildrenTotal)) },
+                { label: 'Other abandoned', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
+              ]
+            },
             { label: 'Closed hours', value: Math.round(voiceValue * (closedBase / voiceChildrenTotal)) }
           ]
         },
@@ -836,6 +870,28 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       ];
     }
     
+    if (nodeId === 'missed_voicemails') {
+      const openBase = 400;
+      const closedBase = 342;
+      const totalBase = openBase + closedBase; // 742
+
+      return [
+        { label: 'Open hours', value: Math.round(totalValue * (openBase / totalBase)) },
+        { label: 'Closed', value: Math.round(totalValue * (closedBase / totalBase)) },
+      ];
+    }
+
+    if (nodeId === 'other_missed') {
+      const openBase = 400;
+      const closedBase = 342;
+      const totalBase = openBase + closedBase; // 742
+
+      return [
+        { label: 'Open hours', value: Math.round(totalValue * (openBase / totalBase)) },
+        { label: 'Closed hours', value: Math.round(totalValue * (closedBase / totalBase)) },
+      ];
+    }
+
     if (nodeId === 'missed') {
       // Same structure as abandoned, but with values adjusted to missed totals
       const voiceBase = 400;
@@ -869,57 +925,11 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     }
     
     if (nodeId === 'queue_timeout') {
-      // Same simple structure as unanswered_transferred_v and other_voicemails
-      const openBase = 400;
-      const closedBase = 342;
-      const totalBase = openBase + closedBase; // 742
-      
-      return [
-        {
-          label: 'Open hours',
-          value: Math.round(totalValue * (openBase / totalBase))
-        },
-        {
-          label: 'Closed',
-          value: Math.round(totalValue * (closedBase / totalBase))
-        }
-      ];
+      return undefined;
     }
     
-    if (nodeId === 'call_messages') {
-      // Call messages breakdown
-      const smsBase = 400;
-      const emailBase = 342;
-      const totalBase = smsBase + emailBase; // 742
-      
-      return [
-        {
-          label: 'SMS notifications',
-          value: Math.round(totalValue * (smsBase / totalBase))
-        },
-        {
-          label: 'Email notifications',
-          value: Math.round(totalValue * (emailBase / totalBase))
-        }
-      ];
-    }
-    
-    if (nodeId === 'spam_calls') {
-      // Spam calls breakdown
-      const identifiedBase = 400;
-      const reportedBase = 342;
-      const totalBase = identifiedBase + reportedBase; // 742
-      
-      return [
-        {
-          label: 'Identified by users',
-          value: Math.round(totalValue * (identifiedBase / totalBase))
-        },
-        {
-          label: 'Reported by users',
-          value: Math.round(totalValue * (reportedBase / totalBase))
-        }
-      ];
+    if (nodeId === 'call_messages' || nodeId === 'spam_calls') {
+      return undefined;
     }
     
     if (nodeId === 'abandoned_queue_b') {
@@ -959,7 +969,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           value: openValue,
           children: [
             { label: 'Short abandoned', value: Math.round(openValue * (shortBase / openChildrenTotal)) },
-            { label: 'Other', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
+            { label: 'Other abandoned', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
           ]
         },
         {
@@ -969,6 +979,29 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       ];
     }
     
+    if (nodeId === 'abandoned_rang_v') {
+      const openBase = 400;
+      const closedBase = 342;
+      const totalBase = openBase + closedBase; // 742
+
+      const openValue = Math.round(totalValue * (openBase / totalBase));
+      const shortBase = 250;
+      const otherBase = 150;
+      const openChildrenTotal = shortBase + otherBase; // 400
+
+      return [
+        {
+          label: 'Open hours',
+          value: openValue,
+          children: [
+            { label: 'Short abandoned', value: Math.round(openValue * (shortBase / openChildrenTotal)) },
+            { label: 'Other abandoned', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
+          ]
+        },
+        { label: 'Closed', value: Math.round(totalValue * (closedBase / totalBase)) }
+      ];
+    }
+
     if (nodeId === 'connected') {
       const manualBase = 300;
       const coldBase = 200;
@@ -1305,7 +1338,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           const tabData = getNodeTabData(node.id, node.value);
           const detailData = getNodeDetailData(node.id, node.value);
           const hasContent = !!(tabData || detailData);
-          const hasChart = !['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'missed_by_customer_v', 'missed_by_cc_v'].includes(node.id);
+          const hasChart = !['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'missed_by_customer_v', 'missed_by_cc_v', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v'].includes(node.id);
           const position = calculatePopoverPosition(e.clientX, e.clientY, hasContent, hasChart);
           setSelectedNodeForDetails({
             nodeId: node.id,
@@ -1633,7 +1666,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         <>
           {/* Overlay */}
           <div
-            className="fixed inset-0 z-[9998]"
+            className="fixed inset-0 z-[10000]"
             onClick={() => setSelectedNodeForDetails(null)}
           />
 
@@ -1652,8 +1685,12 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               value={selectedNodeForDetails.value}
               tabs={getNodeTabData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               details={getNodeDetailData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
-              showChart={!['call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'connected'].includes(selectedNodeForDetails.nodeId)}
-              iconType={['other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'missed_by_customer_v', 'missed_by_cc_v', 'connected'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' : 'both'}
+              showChart={!['call_messages', 'spam_calls', 'connected', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'unanswered_transferred_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v'].includes(selectedNodeForDetails.nodeId)}
+              iconType={
+                ['conv_ai_d', 'queue_timeout', 'agent_closed', 'agent_timeout'].includes(selectedNodeForDetails.nodeId) ? 'monitor-only' :
+                ['other_voicemails', 'call_messages', 'spam_calls', 'missed_by_customer_v', 'missed_by_cc_v', 'connected', 'missed_voicemails', 'other_missed', 'callback_req_v', 'unanswered_transferred_v', 'abandoned_rang_v'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' :
+                'both'
+              }
             />
           </div>
         </>,

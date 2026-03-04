@@ -21,7 +21,7 @@ interface ContainerProps {
   tabs?: TabData[];
   details?: DetailItem[];
   showChart?: boolean; // Controls whether to show donut chart or just phone icon
-  iconType?: 'both' | 'phone-only'; // Controls which icons to show in the title
+  iconType?: 'both' | 'phone-only' | 'monitor-only'; // Controls which icons to show in the title
 }
 
 function Close() {
@@ -78,16 +78,18 @@ function Monitor() {
   );
 }
 
-function Icons({ iconType }: { iconType?: 'both' | 'phone-only' }) {
+function Icons({ iconType }: { iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
+  const showPhone = iconType !== 'monitor-only';
+  const showMonitor = iconType === 'both' || iconType === 'monitor-only';
   return (
     <div className="content-stretch flex gap-[2px] h-[21px] items-center pt-[2px] relative shrink-0" data-name="Icons">
-      <Phone />
-      {iconType === 'both' && <Monitor />}
+      {showPhone && <Phone />}
+      {showMonitor && <Monitor />}
     </div>
   );
 }
 
-function Statistic({ nodeName, iconType }: { nodeName: string; iconType?: 'both' | 'phone-only' }) {
+function Statistic({ nodeName, iconType }: { nodeName: string; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
     <div className="content-stretch flex items-start gap-1 relative shrink-0 w-full" data-name="Statistic">
       <Title nodeName={nodeName} />
@@ -115,7 +117,7 @@ function MainData({ percentage, value }: { percentage: number; value: number }) 
   );
 }
 
-function Statistics({ nodeName, percentage, value, iconType }: { nodeName: string; percentage: number; value: number; iconType?: 'both' | 'phone-only' }) {
+function Statistics({ nodeName, percentage, value, iconType }: { nodeName: string; percentage: number; value: number; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
     <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative" data-name="Statistics">
       <div className="flex flex-col gap-2 w-full h-full">
@@ -239,7 +241,7 @@ function PhoneIconLarge() {
   );
 }
 
-function StatisticsContainer1({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' }) {
+function StatisticsContainer1({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
     <div className="content-stretch flex items-end justify-between relative shrink-0 w-full" data-name="Statistics container">
       <Statistics nodeName={nodeName} percentage={percentage} value={value} iconType={iconType} />
@@ -252,7 +254,7 @@ function StatisticsContainer1({ nodeName, percentage, value, showChart = true, i
   );
 }
 
-function StatisticsContainer({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' }) {
+function StatisticsContainer({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
     <div className="content-stretch flex flex-col gap-[8px] items-start relative shrink-0 w-full" data-name="Statistics container">
       <StatisticsContainer1 nodeName={nodeName} percentage={percentage} value={value} showChart={showChart} iconType={iconType} />
@@ -260,7 +262,7 @@ function StatisticsContainer({ nodeName, percentage, value, showChart = true, ic
   );
 }
 
-function Header({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' }) {
+function Header({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
     <div className="relative shrink-0 w-full" data-name="Header">
       <div className="content-stretch flex flex-col gap-[8px] items-start p-[16px] relative w-full">
