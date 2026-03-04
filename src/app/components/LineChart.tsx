@@ -27,6 +27,7 @@ export function LineChart({
 }: LineChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const tooltipDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [tooltipData, setTooltipData] = useState<{
     x: number;
@@ -324,26 +325,25 @@ export function LineChart({
         });
         
         tooltipGroup.style('display', null);
-        
+
         // Calcular posición del tooltip en coordenadas de pantalla
         const svgRect = svgRef.current!.getBoundingClientRect();
         const tooltipX = svgRect.left + margin.left + xPos;
         const tooltipY = svgRect.top + margin.top;
-        
+
         // Determinar si el tooltip debe mostrarse a la izquierda o derecha
-        // basado en si hay suficiente espacio a la derecha
         const viewportWidth = window.innerWidth;
-        const tooltipWidth = 350; // Ancho aproximado del tooltip
+        const tooltipWidth = 350;
         const showLeft = (tooltipX + tooltipWidth + 20) > viewportWidth;
-        
-        setTooltipData({
-          x: tooltipX,
-          y: tooltipY,
-          date: d.date,
-          showLeft
-        });
+
+        // Delay before showing the tooltip card
+        if (tooltipDelayRef.current) clearTimeout(tooltipDelayRef.current);
+        tooltipDelayRef.current = setTimeout(() => {
+          setTooltipData({ x: tooltipX, y: tooltipY, date: d.date, showLeft });
+        }, 400);
       })
       .on('mouseleave', function() {
+        if (tooltipDelayRef.current) clearTimeout(tooltipDelayRef.current);
         tooltipGroup.style('display', 'none');
         setTooltipData(null);
       });

@@ -27,7 +27,6 @@ const sankeyData: SankeyData = {
     {"id": "abandoned", "label": "Abandoned"},
     {"id": "abandoned_queue_b", "label": "Abandoned queue"},
     {"id": "abandoned_rang_v", "label": "Abandoned rang"},
-    {"id": "abandoned_other_b", "label": "Other abandoned"},
     {"id": "unanswered_transferred_v", "label": "Unanswered transferred calls"},
     {"id": "call_messages", "label": "Call messages"},
     {"id": "other_voicemails", "label": "Other voicemails"},
@@ -59,10 +58,9 @@ const sankeyData: SankeyData = {
     {"source": "missed", "target": "agent_closed", "value": 1500},
     {"source": "missed", "target": "agent_timeout", "value": 500},
     {"source": "missed", "target": "other_missed", "value": 1000},
-    {"source": "unanswered_b", "target": "abandoned", "value": 8000},
+    {"source": "unanswered_b", "target": "abandoned", "value": 7000},
     {"source": "abandoned", "target": "abandoned_queue_b", "value": 5000},
     {"source": "abandoned", "target": "abandoned_rang_v", "value": 2000},
-    {"source": "abandoned", "target": "abandoned_other_b", "value": 1000},
     {"source": "unanswered_b", "target": "unanswered_transferred_v", "value": 3000},
     {"source": "unanswered_b", "target": "call_messages", "value": 1000},
     {"source": "unanswered_b", "target": "other_voicemails", "value": 1000},
@@ -89,6 +87,7 @@ const COLORS = {
   primaryNodeHover: '#5A91CC',
   link: '#EAF2FA',
   linkHover: '#D0E6F5',
+  linkHighlight: '#BDE8FF',
   text: '#333333',
   textSecondary: '#6B7280',
   background: '#FFFFFF'
@@ -573,6 +572,54 @@ function getConnectedElements(nodeId: string, links: any[]) {
   return { connectedNodes, connectedLinks };
 }
 
+// Hit-test a point against a ribbon shape using linear interpolation
+function isPointInRibbon(
+  px: number, py: number,
+  startX: number, endX: number,
+  topStartY: number, topEndY: number,
+  bottomStartY: number, bottomEndY: number
+): boolean {
+  if (px < startX || px > endX) return false;
+  const t = (px - startX) / (endX - startX);
+  const topY = topStartY + t * (topEndY - topStartY);
+  const bottomY = bottomStartY + t * (bottomEndY - bottomStartY);
+  return py >= topY && py <= bottomY;
+}
+
+// Get downstream links and nodes for link hover - traces forward from the hovered link's target
+function getDownstreamElements(linkIndex: number, links: any[]) {
+  if (linkIndex < 0 || linkIndex >= links.length) {
+    return { highlightedLinks: new Set<number>(), highlightedNodes: new Set<string>() };
+  }
+  const link = links[linkIndex];
+  const sourceId = typeof link.source === 'string' ? link.source : link.source?.id;
+  const targetId = typeof link.target === 'string' ? link.target : link.target?.id;
+
+  const highlightedLinks = new Set<number>([linkIndex]);
+  const highlightedNodes = new Set<string>([sourceId, targetId]);
+
+  const queue: string[] = [targetId];
+  const visited = new Set<string>([targetId]);
+
+  while (queue.length > 0) {
+    const nodeId = queue.shift()!;
+    links.forEach((l, i) => {
+      const lSource = typeof l.source === 'string' ? l.source : l.source?.id;
+      const lTarget = typeof l.target === 'string' ? l.target : l.target?.id;
+      if (lSource === nodeId) {
+        highlightedLinks.add(i);
+        highlightedNodes.add(lTarget);
+        if (!visited.has(lTarget)) {
+          visited.add(lTarget);
+          queue.push(lTarget);
+        }
+      }
+    });
+  }
+
+  return { highlightedLinks, highlightedNodes };
+}
+
 // Format number with k/m suffix
 function formatNumber(num: number): string {
   if (num >= 1000000) {
@@ -606,6 +653,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [hoveredNodeStats, setHoveredNodeStats] = useState<string | null>(null);
+  const [hoveredLink, setHoveredLink] = useState<number | null>(null);
   const [selectedNodeForDetails, setSelectedNodeForDetails] = useState<{
     nodeId: string;
     nodeName: string;
@@ -769,9 +817,6 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const voiceChildrenTotal = openBase + closedBase; // 400
 
       const openValue = Math.round(voiceValue * (openBase / voiceChildrenTotal));
-      const shortBase = 150;
-      const otherBase = 150;
-      const openChildrenTotal = shortBase + otherBase; // 300
 
       return [
         {
@@ -779,14 +824,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           value: voiceValue,
           icon: '📞',
           children: [
-            {
-              label: 'Open hours',
-              value: openValue,
-              children: [
-                { label: 'Short abandoned', value: Math.round(openValue * (shortBase / openChildrenTotal)) },
-                { label: 'Other abandoned', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
-              ]
-            },
+            { label: 'Open hours', value: openValue },
             { label: 'Closed hours', value: Math.round(voiceValue * (closedBase / voiceChildrenTotal)) }
           ]
         },
@@ -931,33 +969,6 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       ];
     }
     
-    if (nodeId === 'abandoned_other_b') {
-      const openBase = 400;
-      const closedBase = 342;
-      const totalBase = openBase + closedBase; // 742
-
-      const openValue = Math.round(totalValue * (openBase / totalBase));
-
-      const shortBase = 250;
-      const otherBase = 150;
-      const openChildrenTotal = shortBase + otherBase; // 400
-
-      return [
-        {
-          label: 'Open hours',
-          value: openValue,
-          children: [
-            { label: 'Short abandoned', value: Math.round(openValue * (shortBase / openChildrenTotal)) },
-            { label: 'Other abandoned', value: Math.round(openValue * (otherBase / openChildrenTotal)) }
-          ]
-        },
-        {
-          label: 'Closed',
-          value: Math.round(totalValue * (closedBase / totalBase))
-        }
-      ];
-    }
-
     if (nodeId === 'connected') {
       const manualBase = 300;
       const coldBase = 200;
@@ -1094,10 +1105,15 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     nodesDataRef.current = nodes;
     linksDataRef.current = links;
 
-    // Get connected elements for hover effect
-    const { connectedNodes, connectedLinks } = hoveredNode 
+    // Get connected elements for node hover effect (backward trace)
+    const { connectedNodes, connectedLinks } = hoveredNode
       ? getConnectedElements(hoveredNode, links)
       : { connectedNodes: new Set<string>(), connectedLinks: new Set<number>() };
+
+    // Get downstream elements for link hover effect (forward trace)
+    const { highlightedLinks, highlightedNodes: linkHighlightedNodes } = hoveredLink !== null
+      ? getDownstreamElements(hoveredLink, links)
+      : { highlightedLinks: new Set<number>(), highlightedNodes: new Set<string>() };
 
     // Draw links (filled ribbons like the Figma plugin)
     links.forEach((link: any, index: number) => {
@@ -1105,9 +1121,19 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const targetNode = nodes.find((n: any) => n.id === link.target);
       if (!sourceNode || !targetNode) return;
 
-      const isHighlighted = hoveredNode && connectedLinks.has(index);
-      ctx.fillStyle = isHighlighted ? COLORS.linkHover : COLORS.link;
-      ctx.globalAlpha = isHighlighted ? 0.9 : 1;
+      const isLinkHovered = hoveredLink !== null && highlightedLinks.has(index);
+      const isNodeHighlighted = hoveredNode && connectedLinks.has(index);
+
+      if (isLinkHovered) {
+        ctx.fillStyle = COLORS.linkHighlight;
+        ctx.globalAlpha = 1;
+      } else if (isNodeHighlighted) {
+        ctx.fillStyle = COLORS.linkHover;
+        ctx.globalAlpha = 0.9;
+      } else {
+        ctx.fillStyle = COLORS.link;
+        ctx.globalAlpha = 1;
+      }
 
       drawLinkRibbon(
         ctx,
@@ -1127,8 +1153,9 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     nodes.forEach((node: any) => {
       const isHovered = node.id === hoveredNode;
       const isConnected = hoveredNode && connectedNodes.has(node.id);
+      const isLinkConnected = hoveredLink !== null && linkHighlightedNodes.has(node.id);
       
-      ctx.fillStyle = (isHovered || isConnected) ? COLORS.primaryNodeHover : COLORS.primaryNode;
+      ctx.fillStyle = (isHovered || isConnected || isLinkConnected) ? COLORS.primaryNodeHover : COLORS.primaryNode;
       
       const nodeHeight = node.y1 - node.y0;
       const radius = Math.min(LAYOUT.nodeRadius, nodeHeight / 2);
@@ -1278,7 +1305,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           const tabData = getNodeTabData(node.id, node.value);
           const detailData = getNodeDetailData(node.id, node.value);
           const hasContent = !!(tabData || detailData);
-          const hasChart = !['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'abandoned_other_b', 'missed_by_customer_v', 'missed_by_cc_v'].includes(node.id);
+          const hasChart = !['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'missed_by_customer_v', 'missed_by_cc_v'].includes(node.id);
           const position = calculatePopoverPosition(e.clientX, e.clientY, hasContent, hasChart);
           setSelectedNodeForDetails({
             nodeId: node.id,
@@ -1385,8 +1412,30 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       }
     }
     
+    // Check hover on links (only when not hovering a node)
+    let foundLink: number | null = null;
+    if (!foundNode) {
+      const nodes = nodesDataRef.current;
+      for (let i = 0; i < linksDataRef.current.length; i++) {
+        const link = linksDataRef.current[i];
+        const sourceNode = nodes.find(n => n.id === link.source);
+        const targetNode = nodes.find(n => n.id === link.target);
+        if (!sourceNode || !targetNode) continue;
+        if (isPointInRibbon(
+          adjustedX, adjustedY,
+          sourceNode.x1, targetNode.x0,
+          link.sourceY, link.targetY,
+          link.sourceY + link.sourceHeight, link.targetY + link.targetHeight
+        )) {
+          foundLink = i;
+          break;
+        }
+      }
+    }
+
     setHoveredNode(foundNode);
     setHoveredNodeStats(foundNodeStats);
+    setHoveredLink(foundLink);
   };
 
   useEffect(() => {
@@ -1414,7 +1463,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     requestAnimationFrame(() => {
       renderSankey(canvas, zoom, panOffset);
     });
-  }, [zoom, panOffset, hoveredNode, hoveredNodeStats, expandedNodes]);
+  }, [zoom, panOffset, hoveredNode, hoveredNodeStats, hoveredLink, expandedNodes]);
 
   // Initial render effect - triggers when component becomes visible
   useEffect(() => {
@@ -1604,7 +1653,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               tabs={getNodeTabData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               details={getNodeDetailData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               showChart={!['call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'connected'].includes(selectedNodeForDetails.nodeId)}
-              iconType={['other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'abandoned_other_b', 'missed_by_customer_v', 'missed_by_cc_v', 'connected'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' : 'both'}
+              iconType={['other_voicemails', 'call_messages', 'spam_calls', 'abandoned_queue_b', 'abandoned_rang_v', 'missed_by_customer_v', 'missed_by_cc_v', 'connected'].includes(selectedNodeForDetails.nodeId) ? 'phone-only' : 'both'}
             />
           </div>
         </>,
