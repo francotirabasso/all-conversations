@@ -99,7 +99,7 @@ const LAYOUT = {
 
   // Layout + spacing (mirrors code.js)
   levelSpacing: 300,
-  maxTotalHeight: 800,
+  maxTotalHeight: 500,
   minNodePadding: 20,
   labelHeight: 50,
   labelTopMargin: 16,
@@ -1226,10 +1226,9 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     nodes.forEach((node: any) => {
       const x = node.x1 + LAYOUT.labelOffset;
       const nodeHeight = node.y1 - node.y0;
-      const labelBlockHeight = LAYOUT.labelHeight;
-      const y = nodeHeight >= (labelBlockHeight + LAYOUT.labelTopMargin * 2)
-        ? node.y0 + LAYOUT.labelTopMargin
-        : node.y0 + Math.max(0, (nodeHeight - labelBlockHeight) / 2);
+      // Content block: label (~14px) + gap (6px) + stats (~14px) = ~34px
+      const contentHeight = 34;
+      const y = node.y0 + Math.max(0, (nodeHeight - contentHeight) / 2);
       
       const nodeLevel = nodeLevels.get(node.id) || 0;
       const nodeHasChildren = hasChildren(sankeyData, node.id);
@@ -1338,11 +1337,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       if (node) {
         const labelX = node.x1 + LAYOUT.labelOffset;
         const nodeHeight = node.y1 - node.y0;
-        const labelBlockHeight = LAYOUT.labelHeight;
-        const labelY = nodeHeight >= (labelBlockHeight + LAYOUT.labelTopMargin * 2)
-          ? node.y0 + LAYOUT.labelTopMargin
-          : node.y0 + Math.max(0, (nodeHeight - labelBlockHeight) / 2);
-        
+        const labelY = node.y0 + Math.max(0, (nodeHeight - 34) / 2);
+
         const statsY = labelY + 18;
         const statsHeight = 22;
         const statsWidth = 100;
@@ -1379,10 +1375,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         // Check click on label+chevron
         const labelX = node.x1 + LAYOUT.labelOffset;
         const nodeHeight = node.y1 - node.y0;
-        const labelBlockHeight = LAYOUT.labelHeight;
-        const labelY = nodeHeight >= (labelBlockHeight + LAYOUT.labelTopMargin * 2)
-          ? node.y0 + LAYOUT.labelTopMargin
-          : node.y0 + Math.max(0, (nodeHeight - labelBlockHeight) / 2);
+        const labelY = node.y0 + Math.max(0, (nodeHeight - 34) / 2);
 
         ctx.font = '11px SF Pro, sans-serif';
         const textWidth = ctx.measureText(node.name).width;
@@ -1445,11 +1438,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     for (const node of nodesDataRef.current) {
       const labelX = node.x1 + LAYOUT.labelOffset;
       const nodeHeight = node.y1 - node.y0;
-      const labelBlockHeight = LAYOUT.labelHeight;
-      const labelY = nodeHeight >= (labelBlockHeight + LAYOUT.labelTopMargin * 2)
-        ? node.y0 + LAYOUT.labelTopMargin
-        : node.y0 + Math.max(0, (nodeHeight - labelBlockHeight) / 2);
-      
+      const labelY = node.y0 + Math.max(0, (nodeHeight - 34) / 2);
+
       // Stats area bounds
       const statsY = labelY + 18; // Below label
       const statsHeight = 20; // Height of stats area
