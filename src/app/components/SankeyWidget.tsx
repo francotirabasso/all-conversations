@@ -1251,7 +1251,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       }
       
       // Draw value and percentage (same logic as the Figma plugin)
-      const formattedValue = formatNumber(node.value || 0);
+      const formattedValue = (node.value || 0).toLocaleString();
       const percentageText = `${(node.percentage ?? 100).toFixed(1)}%`;
       
       // Check if this node's stats are being hovered
