@@ -1853,7 +1853,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         <canvas 
           ref={canvasRef}
           className="w-full h-full block"
-          style={{ cursor: isPanningRef.current ? 'grabbing' : (hoveredNode && !isLeafZoneHoveredRef.current ? 'pointer' : 'grab') }}
+          style={{ cursor: isPanningRef.current ? 'grabbing' : ((hoveredNode && !isLeafZoneHoveredRef.current) || hoveredNodeStats ? 'pointer' : 'grab') }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleCanvasMove}
