@@ -1366,29 +1366,32 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       }
     }
     
-    // Check if clicked on label+chevron area (for expand/collapse)
+    // Check if clicked on label+chevron area OR node bar (for expand/collapse)
     for (const node of nodesDataRef.current) {
       const nodeLevel = nodeLevels.get(node.id) || 0;
       const canCollapse = nodeLevel >= 2 && hasChildren(sankeyData, node.id);
-      
+
       if (canCollapse) {
+        // Check click on node bar
+        const clickedBar = adjustedX >= node.x0 && adjustedX <= node.x1 &&
+                           adjustedY >= node.y0 && adjustedY <= node.y1;
+
+        // Check click on label+chevron
         const labelX = node.x1 + LAYOUT.labelOffset;
         const nodeHeight = node.y1 - node.y0;
         const labelBlockHeight = LAYOUT.labelHeight;
         const labelY = nodeHeight >= (labelBlockHeight + LAYOUT.labelTopMargin * 2)
           ? node.y0 + LAYOUT.labelTopMargin
           : node.y0 + Math.max(0, (nodeHeight - labelBlockHeight) / 2);
-        
+
         ctx.font = '11px SF Pro, sans-serif';
         const textWidth = ctx.measureText(node.name).width;
-        const chevronX = labelX + textWidth + 6;
-        
-        // Clickable area: entire label + chevron width
         const clickableWidth = textWidth + 6 + LAYOUT.chevronSize;
-        const clickableHeight = 14; // Label line height
-        
-        if (adjustedX >= labelX && adjustedX <= labelX + clickableWidth &&
-            adjustedY >= labelY && adjustedY <= labelY + clickableHeight) {
+        const clickableHeight = 14;
+        const clickedLabel = adjustedX >= labelX && adjustedX <= labelX + clickableWidth &&
+                             adjustedY >= labelY && adjustedY <= labelY + clickableHeight;
+
+        if (clickedBar || clickedLabel) {
           setExpandedNodes(prev => {
             const newSet = new Set(prev);
             if (newSet.has(node.id)) {
