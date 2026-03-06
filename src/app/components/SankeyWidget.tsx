@@ -858,6 +858,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   const lastPosRef = useRef({ x: 0, y: 0 });
   const nodesDataRef = useRef<any[]>([]);
   const linksDataRef = useRef<any[]>([]);
+  // Hover zones for leaf nodes: extends the interactive area into the label region
+  const leafHoverZonesRef = useRef<Array<{ nodeId: string; x0: number; x1: number; y0: number; y1: number }>>([]);
 
   // Calculate optimal popover position to keep it visible
   const calculatePopoverPosition = (clickX: number, clickY: number, hasContent: boolean, hasChart: boolean) => {
@@ -1314,6 +1316,17 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     nodesDataRef.current = nodes;
     linksDataRef.current = links;
 
+    // Compute leaf hover zones: leaf node bar + label area to the right
+    leafHoverZonesRef.current = nodes
+      .filter((n: any) => !links.some((l: any) => l.source === n.id))
+      .map((leafNode: any) => ({
+        nodeId: leafNode.id,
+        x0: leafNode.x1,       // starts at right edge of node bar
+        x1: leafNode.x1 + 200, // extends ~200px into the label area
+        y0: leafNode.y0,
+        y1: leafNode.y1,
+      }));
+
     // Get connected elements for node hover effect (backward trace)
     const { connectedNodes, connectedLinks } = hoveredNode
       ? getConnectedElements(hoveredNode, links)
@@ -1663,6 +1676,17 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           link.sourceY + link.sourceHeight, link.targetY + link.targetHeight
         )) {
           foundLink = i;
+          break;
+        }
+      }
+    }
+
+    // Extend hover to leaf node label areas (virtual connector zone)
+    if (!foundNode && foundLink === null) {
+      for (const zone of leafHoverZonesRef.current) {
+        if (adjustedX >= zone.x0 && adjustedX <= zone.x1 &&
+            adjustedY >= zone.y0 && adjustedY <= zone.y1) {
+          foundNode = zone.nodeId;
           break;
         }
       }
