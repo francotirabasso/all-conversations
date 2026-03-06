@@ -110,9 +110,9 @@ function MainData({ percentage, value }: { percentage: number; value: number }) 
   return (
     <div className="content-stretch flex items-end gap-2 relative shrink-0 w-full" data-name="Main data">
       <div className="flex flex-col font-['SF_Pro:Medium',sans-serif] font-[510] leading-[0] relative shrink-0 text-[#1c1c1c] text-[27px] whitespace-nowrap">
-        <p className="leading-none text-[20px]">{percentage.toFixed(0)}%</p>
+        <p className="leading-none text-[20px]">{value.toLocaleString()}</p>
       </div>
-      <PercentageContainer value={value} />
+      <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.2] relative shrink-0 text-[#535353] text-[12px] mb-[2px]">{percentage.toFixed(0)}%</p>
     </div>
   );
 }
