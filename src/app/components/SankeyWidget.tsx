@@ -1691,7 +1691,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
                 onClick={() => setMetricOpen(o => !o)}
                 className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
               >
-                <span className="text-[11px] font-medium text-gray-700 leading-none">
+                <span className="text-[12px] font-medium text-gray-700 leading-none">
                   {sankeyData.nodes.find(n => n.id === selectedMetric)?.label ?? 'Conversations'}
                 </span>
                 <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${metricOpen ? 'rotate-180' : ''}`} />
