@@ -93,6 +93,90 @@ const COLORS = {
   background: '#FFFFFF'
 };
 
+// Dialtone color per node for Metric Rainbow theme
+const RAINBOW_NODE_COLORS: Record<string, string> = {
+  conversations_b:          '#6EA6E2', // Indigo 500
+  inbound:                  '#3B96DF', // Blue 450
+  outbound:                 '#7C52FF', // Purple 400
+  answered_b:               '#2EA834', // Green 475
+  unanswered_b:             '#FF9E0E', // Gold 400
+  missed:                   '#FF1356', // Red 400
+  abandoned:                '#FF1BA4', // Magenta 400
+  callback_req_v:           '#38DCD4', // Teal 500
+  initiated:                '#A38FF9', // Purple 300
+  callback_attempts:        '#FFBD48', // Gold 350
+  conv_ai_d:                '#4AA9EA', // Blue 425
+  conv_human_b:             '#1768C6', // Blue 500
+  missed_voicemails:        '#FF716F', // Red 300
+  queue_timeout:            '#FF415B', // Red 350
+  agent_closed:             '#FFABA4', // Red 200
+  agent_timeout:            '#BBA6FC', // Purple 250
+  other_missed:             '#FFDB80', // Gold 300
+  abandoned_queue_b:        '#FC5EA0', // Magenta 300
+  abandoned_rang_v:         '#FFB1CF', // Magenta 200
+  unanswered_transferred_v: '#FFE89C', // Gold 200
+  call_messages:            '#35B7B1', // Teal 600
+  other_voicemails:         '#2AA7A1', // Teal 700
+  spam_calls:               '#BED2F0', // Indigo 300
+  connected:                '#52C926', // Green 425
+  cancelled:                '#FF415B', // Red 350
+  digital_conversations:    '#5FC4F9', // Blue 400
+  agent_cancelled:          '#EA8F07', // Gold 450
+  system_timeout_cancel:    '#FFDB80', // Gold 300
+  customer_declined:        '#FFBD48', // Gold 350
+  successful_callbacks:     '#008E52', // Green 500
+  unsuccessful_callbacks:   '#AF0032', // Red 500
+  missed_by_customer_v:     '#FF716F', // Red 300
+  missed_by_cc_v:           '#D90A45', // Red 450
+};
+
+function darkenHex(hex: string, factor = 0.18): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const d = (n: number) => Math.max(0, Math.round(n * (1 - factor))).toString(16).padStart(2, '0');
+  return `#${d(r)}${d(g)}${d(b)}`;
+}
+
+type ThemeId = 'light-blue' | 'light-gray' | 'rainbow';
+const THEMES: Record<ThemeId, {
+  name: string;
+  dot: string; // color for the dropdown dot indicator
+  getNodeColor: (id: string) => string;
+  getNodeHoverColor: (id: string) => string;
+  linkColor: string;
+  linkHoverColor: string;
+  linkHighlightColor: string;
+}> = {
+  'light-blue': {
+    name: 'Light Blue',
+    dot: '#6EA6E2',
+    getNodeColor: () => COLORS.primaryNode,
+    getNodeHoverColor: () => COLORS.primaryNodeHover,
+    linkColor: COLORS.link,
+    linkHoverColor: COLORS.linkHover,
+    linkHighlightColor: COLORS.linkHighlight,
+  },
+  'light-gray': {
+    name: 'Light & Gray',
+    dot: '#9CA3AF',
+    getNodeColor: () => COLORS.primaryNode,
+    getNodeHoverColor: () => COLORS.primaryNodeHover,
+    linkColor: '#E5E7EB',
+    linkHoverColor: '#D1D5DB',
+    linkHighlightColor: '#9CA3AF',
+  },
+  'rainbow': {
+    name: 'Metric Rainbow',
+    dot: 'rainbow',
+    getNodeColor: (id) => RAINBOW_NODE_COLORS[id] ?? COLORS.primaryNode,
+    getNodeHoverColor: (id) => darkenHex(RAINBOW_NODE_COLORS[id] ?? COLORS.primaryNode),
+    linkColor: '#E5E7EB',
+    linkHoverColor: '#D1D5DB',
+    linkHighlightColor: '#9CA3AF',
+  },
+};
+
 const LAYOUT = {
   nodeWidth: 8,
   minNodeHeight: 20,
@@ -713,6 +797,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   );
   const [selectedMetric, setSelectedMetric] = useState('conversations_b');
   const [metricOpen, setMetricOpen] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState<ThemeId>('light-blue');
+  const [themeOpen, setThemeOpen] = useState(false);
 
   // Nodes at levels 0–2 (0-indexed), grouped by level for the dropdown
   const metricOptions = useMemo(() => {
@@ -1214,14 +1300,15 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const isLinkHovered = hoveredLink !== null && highlightedLinks.has(index);
       const isNodeHighlighted = hoveredNode && connectedLinks.has(index);
 
+      const theme = THEMES[selectedTheme];
       if (isLinkHovered) {
-        ctx.fillStyle = COLORS.linkHighlight;
+        ctx.fillStyle = theme.linkHighlightColor;
         ctx.globalAlpha = 1;
       } else if (isNodeHighlighted) {
-        ctx.fillStyle = COLORS.linkHover;
+        ctx.fillStyle = theme.linkHoverColor;
         ctx.globalAlpha = 0.9;
       } else {
-        ctx.fillStyle = COLORS.link;
+        ctx.fillStyle = theme.linkColor;
         ctx.globalAlpha = 1;
       }
 
@@ -1245,7 +1332,10 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const isConnected = hoveredNode && connectedNodes.has(node.id);
       const isLinkConnected = hoveredLink !== null && linkHighlightedNodes.has(node.id);
       
-      ctx.fillStyle = (isHovered || isConnected || isLinkConnected) ? COLORS.primaryNodeHover : COLORS.primaryNode;
+      const t = THEMES[selectedTheme];
+      ctx.fillStyle = (isHovered || isConnected || isLinkConnected)
+        ? t.getNodeHoverColor(node.id)
+        : t.getNodeColor(node.id);
       
       const nodeHeight = node.y1 - node.y0;
       const radius = Math.min(LAYOUT.nodeRadius, nodeHeight / 2);
@@ -1546,7 +1636,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     requestAnimationFrame(() => {
       renderSankey(canvas, zoom, panOffset);
     });
-  }, [zoom, panOffset, hoveredNode, hoveredNodeStats, hoveredLink, expandedNodes, activeData]);
+  }, [zoom, panOffset, hoveredNode, hoveredNodeStats, hoveredLink, expandedNodes, activeData, selectedTheme]);
 
   // Initial render effect - triggers when component becomes visible
   useEffect(() => {
@@ -1681,8 +1771,50 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           onClick={handleCanvasClick}
         />
         
-        {/* Controls row: metric selector + zoom */}
+        {/* Controls row: theme + metric selector + zoom */}
         <div className={`absolute bottom-2 right-2 flex flex-row items-center gap-2 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+
+          {/* Color Theme Dropdown */}
+          <div className="relative">
+            <div className="flex flex-row items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1">
+              <button
+                onClick={() => setThemeOpen(o => !o)}
+                className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
+              >
+                {/* Dot indicator */}
+                {THEMES[selectedTheme].dot === 'rainbow' ? (
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: 'conic-gradient(#7C52FF, #3B96DF, #38DCD4, #52C926, #FF9E0E, #FF1356, #FF1BA4, #7C52FF)' }} />
+                ) : (
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: THEMES[selectedTheme].dot }} />
+                )}
+                <span className="text-[12px] font-medium text-gray-700 leading-none">
+                  {THEMES[selectedTheme].name}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${themeOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+
+            {themeOpen && (
+              <div className="absolute bottom-full mb-1 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]">
+                {(Object.entries(THEMES) as [ThemeId, typeof THEMES[ThemeId]][]).map(([id, theme]) => (
+                  <button
+                    key={id}
+                    onClick={() => { setSelectedTheme(id); setThemeOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors hover:bg-gray-100 flex items-center gap-2 ${
+                      selectedTheme === id ? 'text-gray-900 bg-gray-50 font-medium' : 'text-gray-600'
+                    }`}
+                  >
+                    {theme.dot === 'rainbow' ? (
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: 'conic-gradient(#7C52FF, #3B96DF, #38DCD4, #52C926, #FF9E0E, #FF1356, #FF1BA4, #7C52FF)' }} />
+                    ) : (
+                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: theme.dot }} />
+                    )}
+                    {theme.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* Metric Selector Dropdown */}
           <div className="relative">
