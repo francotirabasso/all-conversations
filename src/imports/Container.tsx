@@ -444,7 +444,7 @@ function Footer() {
 
 export default function Container({ nodeName, percentage, value, tabs, details, showChart, iconType }: ContainerProps) {
   return (
-    <div className="bg-white content-stretch flex flex-col items-start relative rounded-[12px] w-[320px]" data-name="Container">
+    <div className="bg-[#f9f9f9] content-stretch flex flex-col items-start relative rounded-[12px] w-[320px]" data-name="Container">
       <div aria-hidden="true" className="absolute border-[rgba(28,28,28,0.17)] border-solid border inset-0 pointer-events-none rounded-[12px]" />
       <Header nodeName={nodeName} percentage={percentage} value={value} showChart={showChart} iconType={iconType} />
       {tabs && tabs.length > 0 && <TabsContent tabs={tabs} />}
