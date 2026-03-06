@@ -302,13 +302,13 @@ export function WidgetModal({ title, widgetId, isOpen, onClose, children, showIn
         </div>
         
         {/* Content */}
-        <div className="flex-1 overflow-auto flex flex-col">
-          <div className="flex-1 p-6 p-[0px]">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-hidden">
             {children}
           </div>
-          
+
           {/* Accordion debajo del widget */}
-          <div className="border-t border-gray-200">
+          <div className="border-t border-gray-200 shrink-0">
             <Accordion.Root type="single" collapsible>
               <Accordion.Item value="conversation-details">
                 <Accordion.Header>
