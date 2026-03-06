@@ -1710,7 +1710,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
                         className={`w-full text-left py-1.5 text-[11px] transition-colors hover:bg-gray-100 ${
                           selectedMetric === node.id ? 'text-gray-900 bg-gray-50 font-medium' : 'text-gray-600'
                         }`}
-                        style={{ paddingLeft: `${12 + group.level * 8}px`, paddingRight: '12px' }}
+                        style={{ paddingLeft: '12px', paddingRight: '12px' }}
                       >
                         {node.label}
                       </button>
