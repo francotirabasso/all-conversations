@@ -114,9 +114,9 @@ const RAINBOW_NODE_COLORS: Record<string, string> = {
   other_missed:             '#FFDB80', // Gold 300
   abandoned_queue_b:        '#FC5EA0', // Magenta 300
   abandoned_rang_v:         '#FFB1CF', // Magenta 200
-  unanswered_transferred_v: '#FFE89C', // Gold 200
+  unanswered_transferred_v: '#9071FC', // Purple 350
   call_messages:            '#35B7B1', // Teal 600
-  other_voicemails:         '#2AA7A1', // Teal 700
+  other_voicemails:         '#EA8F07', // Gold 450
   spam_calls:               '#BED2F0', // Indigo 300
   connected:                '#52C926', // Green 425
   cancelled:                '#FF415B', // Red 350
@@ -162,18 +162,18 @@ const THEMES: Record<ThemeId, {
     dot: '#9CA3AF',
     getNodeColor: () => COLORS.primaryNode,
     getNodeHoverColor: () => COLORS.primaryNodeHover,
-    linkColor: '#E5E7EB',
-    linkHoverColor: '#D1D5DB',
-    linkHighlightColor: '#9CA3AF',
+    linkColor: '#F3F4F6',
+    linkHoverColor: '#E5E7EB',
+    linkHighlightColor: '#D1D5DB',
   },
   'rainbow': {
     name: 'Metric Rainbow',
     dot: 'rainbow',
     getNodeColor: (id) => RAINBOW_NODE_COLORS[id] ?? COLORS.primaryNode,
     getNodeHoverColor: (id) => darkenHex(RAINBOW_NODE_COLORS[id] ?? COLORS.primaryNode),
-    linkColor: '#E5E7EB',
-    linkHoverColor: '#D1D5DB',
-    linkHighlightColor: '#9CA3AF',
+    linkColor: '#F3F4F6',
+    linkHoverColor: '#E5E7EB',
+    linkHighlightColor: '#D1D5DB',
   },
 };
 
