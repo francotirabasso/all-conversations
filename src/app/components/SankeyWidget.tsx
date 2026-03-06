@@ -548,6 +548,25 @@ function getNodeValue(data: SankeyData, nodeId: string): number {
     .reduce((sum, l) => sum + l.value, 0);
 }
 
+// BFS backwards to find whether a node belongs to 'inbound' or 'outbound' branch
+function getTopLevelAncestor(nodeId: string, links: SankeyData['links']): 'inbound' | 'outbound' | null {
+  if (nodeId === 'inbound' || nodeId === 'outbound') return null;
+  const visited = new Set<string>();
+  const queue = [nodeId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    for (const link of links) {
+      if (link.target !== current) continue;
+      if (link.source === 'inbound') return 'inbound';
+      if (link.source === 'outbound') return 'outbound';
+      queue.push(link.source);
+    }
+  }
+  return null;
+}
+
 // Extract subtree rooted at a given node
 function extractSubtree(data: SankeyData, rootId: string): SankeyData {
   const nodeIds = new Set<string>([rootId]);
@@ -765,6 +784,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     value: number;
     percentage: number;
     position: { x: number; y: number };
+    parentRef?: { label: string; percentage: number };
+    branchRef?: { label: string; percentage: number };
   } | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     new Set([
@@ -1495,12 +1516,40 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           const hasContent = !!(tabData || detailData);
           const hasChart = !['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'missed_by_customer_v', 'missed_by_cc_v', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v', 'digital_conversations', 'cancelled', 'successful_callbacks', 'unsuccessful_callbacks', 'callback_attempts', 'customer_declined', 'agent_cancelled', 'connected', 'system_timeout_cancel'].includes(node.id);
           const position = calculatePopoverPosition(e.clientX, e.clientY, hasContent, hasChart);
+
+          // Parent ref: % of direct parent
+          const incomingLinks = activeData.links.filter(l => l.target === node.id);
+          let parentRef: { label: string; percentage: number } | undefined;
+          if (incomingLinks.length > 0) {
+            const totalParentValue = incomingLinks.reduce((sum, l) => {
+              return sum + (nodesDataRef.current.find(n => n.id === l.source)?.value ?? 0);
+            }, 0);
+            const parentId = incomingLinks[0].source; // primary parent
+            const parentNodeData = activeData.nodes.find(n => n.id === parentId);
+            if (parentNodeData && totalParentValue > 0) {
+              parentRef = { label: parentNodeData.label, percentage: (node.value / totalParentValue) * 100 };
+            }
+          }
+
+          // Branch ref: % of inbound or outbound ancestor
+          const branchId = getTopLevelAncestor(node.id, activeData.links);
+          let branchRef: { label: string; percentage: number } | undefined;
+          if (branchId) {
+            const branchNode = nodesDataRef.current.find(n => n.id === branchId);
+            const branchNodeData = activeData.nodes.find(n => n.id === branchId);
+            if (branchNode && branchNodeData && branchNode.value > 0) {
+              branchRef = { label: branchNodeData.label, percentage: (node.value / branchNode.value) * 100 };
+            }
+          }
+
           setSelectedNodeForDetails({
             nodeId: node.id,
             nodeName: node.name,
             value: node.value,
             percentage: node.percentage,
-            position
+            position,
+            parentRef,
+            branchRef,
           });
           return;
         }
@@ -1920,6 +1969,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               nodeName={selectedNodeForDetails.nodeName}
               percentage={selectedNodeForDetails.percentage}
               value={selectedNodeForDetails.value}
+              parentRef={selectedNodeForDetails.parentRef}
+              branchRef={selectedNodeForDetails.branchRef}
               tabs={getNodeTabData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               details={getNodeDetailData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               showChart={!['call_messages', 'spam_calls', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'unanswered_transferred_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v', 'digital_conversations', 'cancelled', 'successful_callbacks', 'unsuccessful_callbacks', 'callback_attempts', 'customer_declined', 'agent_cancelled', 'connected', 'missed_by_customer_v', 'missed_by_cc_v', 'system_timeout_cancel', 'other_voicemails'].includes(selectedNodeForDetails.nodeId)}

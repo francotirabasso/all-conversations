@@ -20,8 +20,10 @@ interface ContainerProps {
   value: number;
   tabs?: TabData[];
   details?: DetailItem[];
-  showChart?: boolean; // Controls whether to show donut chart or just phone icon
-  iconType?: 'both' | 'phone-only' | 'monitor-only'; // Controls which icons to show in the title
+  showChart?: boolean;
+  iconType?: 'both' | 'phone-only' | 'monitor-only';
+  parentRef?: { label: string; percentage: number };
+  branchRef?: { label: string; percentage: number };
 }
 
 function Close() {
@@ -106,13 +108,12 @@ function PercentageContainer({ value }: { value: number }) {
   );
 }
 
-function MainData({ percentage, value }: { percentage: number; value: number }) {
+function MainData({ value }: { value: number }) {
   return (
     <div className="content-stretch flex items-end gap-2 relative shrink-0 w-full" data-name="Main data">
       <div className="flex flex-col font-['SF_Pro:Medium',sans-serif] font-[510] leading-[0] relative shrink-0 text-[#1c1c1c] text-[27px] whitespace-nowrap">
         <p className="leading-none text-[20px]">{value.toLocaleString()}</p>
       </div>
-      <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.2] relative shrink-0 text-[#535353] text-[12px] mb-[2px]">{percentage.toFixed(0)}%</p>
     </div>
   );
 }
@@ -122,7 +123,7 @@ function Statistics({ nodeName, percentage, value, iconType }: { nodeName: strin
     <div className="content-stretch flex flex-[1_0_0] flex-col items-start min-h-px min-w-px relative" data-name="Statistics">
       <div className="flex flex-col gap-2 w-full h-full">
         <Statistic nodeName={nodeName} iconType={iconType} />
-        <MainData percentage={percentage} value={value} />
+        <MainData value={value} />
       </div>
     </div>
   );
@@ -241,6 +242,8 @@ function PhoneIconLarge() {
   );
 }
 
+type RefProps = { parentRef?: { label: string; percentage: number }; branchRef?: { label: string; percentage: number } };
+
 function StatisticsContainer1({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
     <div className="content-stretch flex items-end justify-between relative shrink-0 w-full" data-name="Statistics container">
@@ -264,10 +267,28 @@ function StatisticsContainer({ nodeName, percentage, value, showChart = true, ic
 
 function Header({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
-    <div className="relative shrink-0 w-full" data-name="Header">
+    <div className="relative shrink-0 w-full border-b border-[rgba(28,28,28,0.1)]" data-name="Header">
       <div className="content-stretch flex flex-col gap-[8px] items-start p-[16px] relative w-full">
         <StatisticsContainer nodeName={nodeName} percentage={percentage} value={value} showChart={showChart} iconType={iconType} />
       </div>
+    </div>
+  );
+}
+
+function PercentageRefsSection({ parentRef, branchRef }: RefProps) {
+  if (!parentRef && !branchRef) return null;
+  return (
+    <div className="w-full border-b border-[rgba(28,28,28,0.1)] px-[16px] py-[12px] flex flex-col gap-[6px]">
+      {parentRef && (
+        <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.4] text-[#535353] text-[12px]">
+          {parentRef.percentage.toFixed(0)}% of {parentRef.label}
+        </p>
+      )}
+      {branchRef && (
+        <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.4] text-[#535353] text-[12px]">
+          {branchRef.percentage.toFixed(0)}% of {branchRef.label}
+        </p>
+      )}
     </div>
   );
 }
@@ -307,7 +328,7 @@ function TabsContent({ tabs }: { tabs: TabData[] }) {
   const [activeTab, setActiveTab] = useState(0);
 
   return (
-    <div className="w-full border-t border-[rgba(28,28,28,0.1)]">
+    <div className="w-full">
       {/* Tab Headers */}
       <div className="flex border-b border-[rgba(28,28,28,0.1)] px-1">
         {tabs.map((tab, index) => (
@@ -380,8 +401,8 @@ function HierarchicalDetailRow({ item, depth = 0 }: { item: DetailItem; depth?: 
 
 function DetailsContent({ details }: { details: DetailItem[] }) {
   return (
-    <div className="w-full border-t border-[rgba(28,28,28,0.1)]">
-      <div 
+    <div className="w-full">
+      <div
         className="max-h-[300px] overflow-y-auto"
         style={{
           scrollbarWidth: 'thin',
@@ -442,11 +463,12 @@ function Footer() {
   );
 }
 
-export default function Container({ nodeName, percentage, value, tabs, details, showChart, iconType }: ContainerProps) {
+export default function Container({ nodeName, percentage, value, tabs, details, showChart, iconType, parentRef, branchRef }: ContainerProps) {
   return (
     <div className="bg-[#f9f9f9] content-stretch flex flex-col items-start relative rounded-[12px] w-[320px] shadow-[0_4px_16px_rgba(0,0,0,0.08)]" data-name="Container">
       <div aria-hidden="true" className="absolute border-[rgba(28,28,28,0.17)] border-solid border inset-0 pointer-events-none rounded-[12px]" />
       <Header nodeName={nodeName} percentage={percentage} value={value} showChart={showChart} iconType={iconType} />
+      <PercentageRefsSection parentRef={parentRef} branchRef={branchRef} />
       {tabs && tabs.length > 0 && <TabsContent tabs={tabs} />}
       {details && details.length > 0 && <DetailsContent details={details} />}
       <Footer />
