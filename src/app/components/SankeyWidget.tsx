@@ -1640,7 +1640,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         
         {/* Zoom Controls */}
         <div 
-          className={`absolute bottom-2 right-2 flex flex-col gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1 transition-opacity duration-200 ${
+          className={`absolute bottom-2 right-2 flex flex-row gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1 transition-opacity duration-200 ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
         >
