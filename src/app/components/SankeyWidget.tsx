@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Widget } from './Widget';
-import { ZoomIn, ZoomOut, Maximize2, X, ChevronDown } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, X, ChevronDown, FoldHorizontal, UnfoldHorizontal } from 'lucide-react';
 import Container from '../../imports/Container';
 
 interface SankeyData {
@@ -93,42 +93,25 @@ const COLORS = {
   background: '#FFFFFF'
 };
 
-// Dialtone color per node for Metric Rainbow theme
-const RAINBOW_NODE_COLORS: Record<string, string> = {
-  conversations_b:          '#6EA6E2', // Indigo 500
-  inbound:                  '#3B96DF', // Blue 450
-  outbound:                 '#7C52FF', // Purple 400
-  answered_b:               '#2EA834', // Green 475
-  unanswered_b:             '#FF9E0E', // Gold 400
-  missed:                   '#FF1356', // Red 400
-  abandoned:                '#FF1BA4', // Magenta 400
-  callback_req_v:           '#38DCD4', // Teal 500
-  initiated:                '#A38FF9', // Purple 300
-  callback_attempts:        '#FFBD48', // Gold 350
-  conv_ai_d:                '#4AA9EA', // Blue 425
-  conv_human_b:             '#1768C6', // Blue 500
-  missed_voicemails:        '#FF716F', // Red 300
-  queue_timeout:            '#FF415B', // Red 350
-  agent_closed:             '#FFABA4', // Red 200
-  agent_timeout:            '#BBA6FC', // Purple 250
-  other_missed:             '#FFDB80', // Gold 300
-  abandoned_queue_b:        '#FC5EA0', // Magenta 300
-  abandoned_rang_v:         '#FFB1CF', // Magenta 200
-  unanswered_transferred_v: '#9071FC', // Purple 350
-  call_messages:            '#35B7B1', // Teal 600
-  other_voicemails:         '#EA8F07', // Gold 450
-  spam_calls:               '#BED2F0', // Indigo 300
-  connected:                '#52C926', // Green 425
-  cancelled:                '#FF415B', // Red 350
-  digital_conversations:    '#5FC4F9', // Blue 400
-  agent_cancelled:          '#EA8F07', // Gold 450
-  system_timeout_cancel:    '#FFDB80', // Gold 300
-  customer_declined:        '#FFBD48', // Gold 350
-  successful_callbacks:     '#008E52', // Green 500
-  unsuccessful_callbacks:   '#AF0032', // Red 500
-  missed_by_customer_v:     '#FF716F', // Red 300
-  missed_by_cc_v:           '#D90A45', // Red 450
-};
+// Dialtone dt-color-chart-categorical colors in order (01–11)
+const CATEGORICAL_COLORS = [
+  '#9071FC', // 01 purple
+  '#FC5EA0', // 02 magenta
+  '#4AA9EA', // 03 blue
+  '#FF9E0E', // 04 gold
+  '#52C926', // 05 green
+  '#FB79F3', // 06 berry
+  '#F66437', // 07 coral
+  '#CABF27', // 08 olive
+  '#FF415B', // 09 red
+  '#35B7B1', // 10 teal
+  '#CEC8C4', // 11 tan
+];
+
+// Assign categorical colors in node-array order, cycling if needed
+const RAINBOW_NODE_COLORS: Record<string, string> = Object.fromEntries(
+  sankeyData.nodes.map((node, i) => [node.id, CATEGORICAL_COLORS[i % CATEGORICAL_COLORS.length]])
+);
 
 function darkenHex(hex: string, factor = 0.18): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -158,8 +141,8 @@ const THEMES: Record<ThemeId, {
     linkHighlightColor: COLORS.linkHighlight,
   },
   'light-gray': {
-    name: 'Light & Gray',
-    dot: '#9CA3AF',
+    name: 'Blue & Grey',
+    dot: 'blue-grey',
     getNodeColor: () => COLORS.primaryNode,
     getNodeHoverColor: () => COLORS.primaryNodeHover,
     linkColor: '#F3F4F6',
@@ -799,6 +782,18 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   const [metricOpen, setMetricOpen] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState<ThemeId>('light-blue');
   const [themeOpen, setThemeOpen] = useState(false);
+  const themeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!themeOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (themeRef.current && !themeRef.current.contains(e.target as Node)) {
+        setThemeOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [themeOpen]);
 
   // Nodes at levels 0–2 (0-indexed), grouped by level for the dropdown
   const metricOptions = useMemo(() => {
@@ -820,6 +815,23 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     if (selectedMetric === 'conversations_b') return sankeyData;
     return extractSubtree(sankeyData, selectedMetric);
   }, [selectedMetric]);
+
+  const allExpandableNodes = useMemo(() => {
+    const levels = calculateNodeLevels(activeData);
+    return activeData.nodes
+      .filter(n => (levels.get(n.id) ?? 0) >= 2 && hasChildren(activeData, n.id))
+      .map(n => n.id);
+  }, [activeData]);
+
+  const allExpanded = allExpandableNodes.every(id => expandedNodes.has(id));
+
+  const handleToggleAllExpanded = () => {
+    if (allExpanded) {
+      setExpandedNodes(new Set());
+    } else {
+      setExpandedNodes(new Set(allExpandableNodes));
+    }
+  };
 
   const isPanningRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
@@ -1305,8 +1317,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         ctx.fillStyle = theme.linkHighlightColor;
         ctx.globalAlpha = 1;
       } else if (isNodeHighlighted) {
-        ctx.fillStyle = theme.linkHoverColor;
-        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = theme.linkHighlightColor;
+        ctx.globalAlpha = 1;
       } else {
         ctx.fillStyle = theme.linkColor;
         ctx.globalAlpha = 1;
@@ -1771,50 +1783,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           onClick={handleCanvasClick}
         />
         
-        {/* Controls row: theme + metric selector + zoom */}
+        {/* Controls row: metric selector + theme + collapse + zoom */}
         <div className={`absolute bottom-2 right-2 flex flex-row items-center gap-2 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-
-          {/* Color Theme Dropdown */}
-          <div className="relative">
-            <div className="flex flex-row items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1">
-              <button
-                onClick={() => setThemeOpen(o => !o)}
-                className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
-              >
-                {/* Dot indicator */}
-                {THEMES[selectedTheme].dot === 'rainbow' ? (
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: 'conic-gradient(#7C52FF, #3B96DF, #38DCD4, #52C926, #FF9E0E, #FF1356, #FF1BA4, #7C52FF)' }} />
-                ) : (
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ background: THEMES[selectedTheme].dot }} />
-                )}
-                <span className="text-[12px] font-medium text-gray-700 leading-none">
-                  {THEMES[selectedTheme].name}
-                </span>
-                <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${themeOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-
-            {themeOpen && (
-              <div className="absolute bottom-full mb-1 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]">
-                {(Object.entries(THEMES) as [ThemeId, typeof THEMES[ThemeId]][]).map(([id, theme]) => (
-                  <button
-                    key={id}
-                    onClick={() => { setSelectedTheme(id); setThemeOpen(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors hover:bg-gray-100 flex items-center gap-2 ${
-                      selectedTheme === id ? 'text-gray-900 bg-gray-50 font-medium' : 'text-gray-600'
-                    }`}
-                  >
-                    {theme.dot === 'rainbow' ? (
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: 'conic-gradient(#7C52FF, #3B96DF, #38DCD4, #52C926, #FF9E0E, #FF1356, #FF1BA4, #7C52FF)' }} />
-                    ) : (
-                      <span className="w-3 h-3 rounded-full shrink-0" style={{ background: theme.dot }} />
-                    )}
-                    {theme.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
           {/* Metric Selector Dropdown */}
           <div className="relative">
@@ -1822,9 +1792,10 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               <button
                 onClick={() => setMetricOpen(o => !o)}
                 className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
+                title="First level"
               >
                 <span className="text-[12px] font-medium text-gray-700 leading-none">
-                  {sankeyData.nodes.find(n => n.id === selectedMetric)?.label ?? 'Conversations'}
+                  {activeData.nodes.find(n => n.id === selectedMetric)?.label ?? 'Conversations'}
                 </span>
                 <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${metricOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -1851,6 +1822,64 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Color Theme Dropdown */}
+          <div className="relative" ref={themeRef}>
+            <div className="flex flex-row items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1">
+              <button
+                onClick={() => setThemeOpen(o => !o)}
+                className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
+                title="Color theme"
+              >
+                {/* Dot indicator */}
+                {THEMES[selectedTheme].dot === 'rainbow' ? (
+                  <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(#FC5EA0 0deg 120deg, #4AA9EA 120deg 240deg, #52C926 240deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
+                ) : THEMES[selectedTheme].dot === 'blue-grey' ? (
+                  <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(from -45deg, #6EA6E2 0deg 180deg, #F3F4F6 180deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
+                ) : (
+                  <span className="w-3 h-3 rounded shrink-0" style={{ background: THEMES[selectedTheme].dot, border: '1px solid rgba(0,0,0,0.12)' }} />
+                )}
+                <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${themeOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+
+            {themeOpen && (
+              <div className="absolute bottom-full mb-1 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]">
+                {(Object.entries(THEMES) as [ThemeId, typeof THEMES[ThemeId]][]).map(([id, theme]) => (
+                  <button
+                    key={id}
+                    onClick={() => { setSelectedTheme(id); setThemeOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors hover:bg-gray-100 flex items-center gap-2 ${
+                      selectedTheme === id ? 'text-gray-900 bg-gray-50 font-medium' : 'text-gray-600'
+                    }`}
+                  >
+                    {theme.dot === 'rainbow' ? (
+                      <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(#FC5EA0 0deg 120deg, #4AA9EA 120deg 240deg, #52C926 240deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
+                    ) : theme.dot === 'blue-grey' ? (
+                      <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(from -45deg, #6EA6E2 0deg 180deg, #F3F4F6 180deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
+                    ) : (
+                      <span className="w-3 h-3 rounded shrink-0" style={{ background: theme.dot, border: '1px solid rgba(0,0,0,0.12)' }} />
+                    )}
+                    {theme.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Collapse / Expand all */}
+          <div className="flex flex-row gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1">
+            <button
+              onClick={handleToggleAllExpanded}
+              className="p-2 hover:bg-gray-100 rounded transition-colors"
+              title={allExpanded ? 'Collapse all' : 'Expand all'}
+            >
+              {allExpanded
+                ? <FoldHorizontal className="w-4 h-4 text-gray-700" />
+                : <UnfoldHorizontal className="w-4 h-4 text-gray-700" />
+              }
+            </button>
           </div>
 
           {/* Zoom Controls */}
