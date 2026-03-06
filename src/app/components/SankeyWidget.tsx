@@ -860,6 +860,8 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   const linksDataRef = useRef<any[]>([]);
   // Hover zones for leaf nodes: extends the interactive area into the label region
   const leafHoverZonesRef = useRef<Array<{ nodeId: string; x0: number; x1: number; y0: number; y1: number }>>([]);
+  // True when hoveredNode was triggered by a leaf zone (not the node bar itself) — keeps cursor as 'grab'
+  const isLeafZoneHoveredRef = useRef(false);
 
   // Calculate optimal popover position to keep it visible
   const calculatePopoverPosition = (clickX: number, clickY: number, hasContent: boolean, hasChart: boolean) => {
@@ -1682,15 +1684,18 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     }
 
     // Extend hover to leaf node label areas (virtual connector zone)
+    let isLeafZoneHover = false;
     if (!foundNode && foundLink === null) {
       for (const zone of leafHoverZonesRef.current) {
         if (adjustedX >= zone.x0 && adjustedX <= zone.x1 &&
             adjustedY >= zone.y0 && adjustedY <= zone.y1) {
           foundNode = zone.nodeId;
+          isLeafZoneHover = true;
           break;
         }
       }
     }
+    isLeafZoneHoveredRef.current = isLeafZoneHover;
 
     setHoveredNode(foundNode);
     setHoveredNodeStats(foundNodeStats);
@@ -1848,7 +1853,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         <canvas 
           ref={canvasRef}
           className="w-full h-full block"
-          style={{ cursor: isPanningRef.current ? 'grabbing' : (hoveredNode ? 'pointer' : 'grab') }}
+          style={{ cursor: isPanningRef.current ? 'grabbing' : (hoveredNode && !isLeafZoneHoveredRef.current ? 'pointer' : 'grab') }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleCanvasMove}
