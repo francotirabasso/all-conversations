@@ -586,7 +586,7 @@ function isPointInRibbon(
   return py >= topY && py <= bottomY;
 }
 
-// Get downstream links and nodes for link hover - traces forward from the hovered link's target
+// Get downstream links and nodes for link hover - traces forward from hovered link's target AND backward to root from source
 function getDownstreamElements(linkIndex: number, links: any[]) {
   if (linkIndex < 0 || linkIndex >= links.length) {
     return { highlightedLinks: new Set<number>(), highlightedNodes: new Set<string>() };
@@ -598,20 +598,39 @@ function getDownstreamElements(linkIndex: number, links: any[]) {
   const highlightedLinks = new Set<number>([linkIndex]);
   const highlightedNodes = new Set<string>([sourceId, targetId]);
 
-  const queue: string[] = [targetId];
-  const visited = new Set<string>([targetId]);
-
-  while (queue.length > 0) {
-    const nodeId = queue.shift()!;
+  // Forward BFS: from target down to leaves
+  const forwardQueue: string[] = [targetId];
+  const forwardVisited = new Set<string>([targetId]);
+  while (forwardQueue.length > 0) {
+    const nodeId = forwardQueue.shift()!;
     links.forEach((l, i) => {
       const lSource = typeof l.source === 'string' ? l.source : l.source?.id;
       const lTarget = typeof l.target === 'string' ? l.target : l.target?.id;
       if (lSource === nodeId) {
         highlightedLinks.add(i);
         highlightedNodes.add(lTarget);
-        if (!visited.has(lTarget)) {
-          visited.add(lTarget);
-          queue.push(lTarget);
+        if (!forwardVisited.has(lTarget)) {
+          forwardVisited.add(lTarget);
+          forwardQueue.push(lTarget);
+        }
+      }
+    });
+  }
+
+  // Backward BFS: from source up to root
+  const backwardQueue: string[] = [sourceId];
+  const backwardVisited = new Set<string>([sourceId]);
+  while (backwardQueue.length > 0) {
+    const nodeId = backwardQueue.shift()!;
+    links.forEach((l, i) => {
+      const lSource = typeof l.source === 'string' ? l.source : l.source?.id;
+      const lTarget = typeof l.target === 'string' ? l.target : l.target?.id;
+      if (lTarget === nodeId) {
+        highlightedLinks.add(i);
+        highlightedNodes.add(lSource);
+        if (!backwardVisited.has(lSource)) {
+          backwardVisited.add(lSource);
+          backwardQueue.push(lSource);
         }
       }
     });
