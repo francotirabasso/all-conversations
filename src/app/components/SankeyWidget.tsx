@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Widget } from './Widget';
 import { ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
@@ -481,6 +481,25 @@ function getNodeValue(data: SankeyData, nodeId: string): number {
     .reduce((sum, l) => sum + l.value, 0);
 }
 
+// Extract subtree rooted at a given node
+function extractSubtree(data: SankeyData, rootId: string): SankeyData {
+  const nodeIds = new Set<string>([rootId]);
+  const queue = [rootId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    for (const link of data.links) {
+      if (link.source === id && !nodeIds.has(link.target)) {
+        nodeIds.add(link.target);
+        queue.push(link.target);
+      }
+    }
+  }
+  return {
+    nodes: data.nodes.filter(n => nodeIds.has(n.id)),
+    links: data.links.filter(l => nodeIds.has(l.source) && nodeIds.has(l.target)),
+  };
+}
+
 // Filter data based on expanded nodes
 function filterDataByExpanded(data: SankeyData, expandedNodes: Set<string>, maxDepth: number): SankeyData {
   const levels = calculateNodeLevels(data);
@@ -692,6 +711,12 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       'callback_attempts'
     ])
   );
+  const [selectedMetric, setSelectedMetric] = useState<'conversations' | 'inbound' | 'outbound'>('conversations');
+  const activeData = useMemo(() => {
+    if (selectedMetric === 'conversations') return sankeyData;
+    return extractSubtree(sankeyData, selectedMetric);
+  }, [selectedMetric]);
+
   const isPanningRef = useRef(false);
   const lastPosRef = useRef({ x: 0, y: 0 });
   const nodesDataRef = useRef<any[]>([]);
@@ -1107,7 +1132,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     ctx.translate(margin.left, margin.top);
 
     // Filter data based on expanded nodes
-    const filteredData = filterDataByExpanded(sankeyData, expandedNodes, 10);
+    const filteredData = filterDataByExpanded(activeData, expandedNodes, 10);
 
     // --- Layout logic ported from the Figma plugin (code.js) ---
     // 1) Levels / columns
@@ -1231,7 +1256,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const y = node.y0 + Math.max(0, (nodeHeight - contentHeight) / 2);
       
       const nodeLevel = nodeLevels.get(node.id) || 0;
-      const nodeHasChildren = hasChildren(sankeyData, node.id);
+      const nodeHasChildren = hasChildren(activeData, node.id);
       const isExpanded = expandedNodes.has(node.id);
       const canCollapse = nodeLevel >= 2 && nodeHasChildren;
       
@@ -1327,7 +1352,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     const adjustedX = x - margin.left;
     const adjustedY = y - margin.top;
     
-    const nodeLevels = calculateNodeLevels(sankeyData);
+    const nodeLevels = calculateNodeLevels(activeData);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
@@ -1365,7 +1390,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     // Check if clicked on label+chevron area OR node bar (for expand/collapse)
     for (const node of nodesDataRef.current) {
       const nodeLevel = nodeLevels.get(node.id) || 0;
-      const canCollapse = nodeLevel >= 2 && hasChildren(sankeyData, node.id);
+      const canCollapse = nodeLevel >= 2 && hasChildren(activeData, node.id);
 
       if (canCollapse) {
         // Check click on node bar
@@ -1503,7 +1528,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     requestAnimationFrame(() => {
       renderSankey(canvas, zoom, panOffset);
     });
-  }, [zoom, panOffset, hoveredNode, hoveredNodeStats, hoveredLink, expandedNodes]);
+  }, [zoom, panOffset, hoveredNode, hoveredNodeStats, hoveredLink, expandedNodes, activeData]);
 
   // Initial render effect - triggers when component becomes visible
   useEffect(() => {
@@ -1638,8 +1663,29 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           onClick={handleCanvasClick}
         />
         
+        {/* Metric Selector */}
+        <div
+          className={`absolute bottom-2 right-[112px] flex flex-row bg-white rounded-lg shadow-lg border border-gray-200 p-1 gap-[2px] transition-opacity duration-200 ${
+            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+        >
+          {(['conversations', 'inbound', 'outbound'] as const).map((metric) => (
+            <button
+              key={metric}
+              onClick={() => setSelectedMetric(metric)}
+              className={`px-2 py-1.5 rounded text-[11px] font-medium transition-colors ${
+                selectedMetric === metric
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+              }`}
+            >
+              {metric.charAt(0).toUpperCase() + metric.slice(1)}
+            </button>
+          ))}
+        </div>
+
         {/* Zoom Controls */}
-        <div 
+        <div
           className={`absolute bottom-2 right-2 flex flex-row gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1 transition-opacity duration-200 ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
