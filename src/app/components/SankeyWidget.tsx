@@ -1689,7 +1689,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
             <div className="flex flex-row items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1">
               <button
                 onClick={() => setMetricOpen(o => !o)}
-                className="flex flex-row items-center gap-1 p-2 hover:bg-gray-100 rounded transition-colors"
+                className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
               >
                 <span className="text-[11px] font-medium text-gray-700 leading-none">
                   {sankeyData.nodes.find(n => n.id === selectedMetric)?.label ?? 'Conversations'}
