@@ -48,7 +48,7 @@ function Title({ nodeName }: { nodeName: string }) {
   return (
     <div className="content-stretch flex items-center relative shrink-0" data-name="Title">
       <div className="flex flex-col font-['SF_Pro:Regular',sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[#535353] text-[15px] whitespace-nowrap">
-        <p className="leading-[1.4]">{nodeName}</p>
+        <p className="leading-[1.4]">{nodeName.length > 20 ? nodeName.slice(0, 20) + '…' : nodeName}</p>
       </div>
     </div>
   );
