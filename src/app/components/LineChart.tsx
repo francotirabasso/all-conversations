@@ -391,7 +391,7 @@ export function LineChart({
       {/* Tooltip rendered via Portal to avoid overflow-clip issues */}
       {tooltipData && createPortal(
         <div
-          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 p-3 pointer-events-none z-[10000]"
+          className="fixed bg-[#f9f9f9] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-gray-200 p-3 pointer-events-none z-[10000]"
           style={{
             left: tooltipData.showLeft ? `${tooltipData.x - 360}px` : `${tooltipData.x + 10}px`,
             top: `${tooltipData.y}px`,
