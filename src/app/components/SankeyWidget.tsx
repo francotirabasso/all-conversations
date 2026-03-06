@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Widget } from './Widget';
-import { ZoomIn, ZoomOut, Maximize2, X } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, X, ChevronDown } from 'lucide-react';
 import Container from '../../imports/Container';
 
 interface SankeyData {
@@ -711,9 +711,27 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       'callback_attempts'
     ])
   );
-  const [selectedMetric, setSelectedMetric] = useState<'conversations' | 'inbound' | 'outbound'>('conversations');
+  const [selectedMetric, setSelectedMetric] = useState('conversations_b');
+  const [metricOpen, setMetricOpen] = useState(false);
+
+  // Nodes at levels 0–2 (0-indexed), grouped by level for the dropdown
+  const metricOptions = useMemo(() => {
+    const levels = calculateNodeLevels(sankeyData);
+    const grouped: { level: number; nodes: { id: string; label: string }[] }[] = [];
+    sankeyData.nodes
+      .filter(n => (levels.get(n.id) ?? 0) <= 2)
+      .forEach(n => {
+        const lv = levels.get(n.id) ?? 0;
+        let group = grouped.find(g => g.level === lv);
+        if (!group) { group = { level: lv, nodes: [] }; grouped.push(group); }
+        group.nodes.push(n);
+      });
+    grouped.sort((a, b) => a.level - b.level);
+    return grouped;
+  }, []);
+
   const activeData = useMemo(() => {
-    if (selectedMetric === 'conversations') return sankeyData;
+    if (selectedMetric === 'conversations_b') return sankeyData;
     return extractSubtree(sankeyData, selectedMetric);
   }, [selectedMetric]);
 
@@ -1663,54 +1681,59 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           onClick={handleCanvasClick}
         />
         
-        {/* Metric Selector */}
-        <div
-          className={`absolute bottom-2 right-[112px] flex flex-row bg-white rounded-lg shadow-lg border border-gray-200 p-1 gap-[2px] transition-opacity duration-200 ${
-            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          {(['conversations', 'inbound', 'outbound'] as const).map((metric) => (
-            <button
-              key={metric}
-              onClick={() => setSelectedMetric(metric)}
-              className={`px-2 py-1.5 rounded text-[11px] font-medium transition-colors ${
-                selectedMetric === metric
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-              }`}
-            >
-              {metric.charAt(0).toUpperCase() + metric.slice(1)}
-            </button>
-          ))}
-        </div>
+        {/* Controls row: metric selector + zoom */}
+        <div className={`absolute bottom-2 right-2 flex flex-row items-center gap-2 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
 
-        {/* Zoom Controls */}
-        <div
-          className={`absolute bottom-2 right-2 flex flex-row gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1 transition-opacity duration-200 ${
-            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          <button
-            onClick={handleZoomIn}
-            className="p-2 hover:bg-gray-100 rounded transition-colors"
-            title="Zoom in"
-          >
-            <ZoomIn className="w-4 h-4 text-gray-700" />
-          </button>
-          <button
-            onClick={handleZoomOut}
-            className="p-2 hover:bg-gray-100 rounded transition-colors"
-            title="Zoom out"
-          >
-            <ZoomOut className="w-4 h-4 text-gray-700" />
-          </button>
-          <button
-            onClick={handleResetZoom}
-            className="p-2 hover:bg-gray-100 rounded transition-colors"
-            title="Reset zoom"
-          >
-            <Maximize2 className="w-4 h-4 text-gray-700" />
-          </button>
+          {/* Metric Selector Dropdown */}
+          <div className="relative">
+            <div className="flex flex-row items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1">
+              <button
+                onClick={() => setMetricOpen(o => !o)}
+                className="flex flex-row items-center gap-1 p-2 hover:bg-gray-100 rounded transition-colors"
+              >
+                <span className="text-[11px] font-medium text-gray-700 leading-none">
+                  {sankeyData.nodes.find(n => n.id === selectedMetric)?.label ?? 'Conversations'}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${metricOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+
+            {metricOpen && (
+              <div className="absolute bottom-full mb-1 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]">
+                {metricOptions.map((group, gi) => (
+                  <React.Fragment key={group.level}>
+                    {gi > 0 && <div className="h-px bg-gray-100 my-1" />}
+                    {group.nodes.map(node => (
+                      <button
+                        key={node.id}
+                        onClick={() => { setSelectedMetric(node.id); setMetricOpen(false); }}
+                        className={`w-full text-left py-1.5 text-[11px] transition-colors hover:bg-gray-100 ${
+                          selectedMetric === node.id ? 'text-gray-900 bg-gray-50 font-medium' : 'text-gray-600'
+                        }`}
+                        style={{ paddingLeft: `${12 + group.level * 8}px`, paddingRight: '12px' }}
+                      >
+                        {node.label}
+                      </button>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex flex-row gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1">
+            <button onClick={handleZoomIn} className="p-2 hover:bg-gray-100 rounded transition-colors" title="Zoom in">
+              <ZoomIn className="w-4 h-4 text-gray-700" />
+            </button>
+            <button onClick={handleZoomOut} className="p-2 hover:bg-gray-100 rounded transition-colors" title="Zoom out">
+              <ZoomOut className="w-4 h-4 text-gray-700" />
+            </button>
+            <button onClick={handleResetZoom} className="p-2 hover:bg-gray-100 rounded transition-colors" title="Reset zoom">
+              <Maximize2 className="w-4 h-4 text-gray-700" />
+            </button>
+          </div>
+
         </div>
       </div>
 
