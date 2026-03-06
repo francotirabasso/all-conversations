@@ -80,11 +80,17 @@ function Monitor() {
   );
 }
 
+function iconTooltip(showPhone: boolean, showMonitor: boolean): string {
+  if (showPhone && showMonitor) return 'Voice and Digital';
+  if (showPhone) return 'Voice only';
+  return 'Digital only';
+}
+
 function Icons({ iconType }: { iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   const showPhone = iconType !== 'monitor-only';
   const showMonitor = iconType === 'both' || iconType === 'monitor-only';
   return (
-    <div className="content-stretch flex gap-[2px] h-[21px] items-center pt-[2px] relative shrink-0" data-name="Icons">
+    <div className="content-stretch flex gap-[2px] h-[21px] items-center pt-[2px] relative shrink-0" title={iconTooltip(showPhone, showMonitor)} data-name="Icons">
       {showPhone && <Phone />}
       {showMonitor && <Monitor />}
     </div>
@@ -316,8 +322,12 @@ function DetailRow({ label, value, icon }: { label: string; value: number; icon?
     <div className="flex items-center justify-between py-2.5 px-4">
       <div className="flex items-center gap-2">
         <span className="font-['SF_Pro:Light',sans-serif] font-light text-[13px] text-[#535353]">{label}</span>
-        {showPhone && <Phone />}
-        {showMonitor && <Monitor />}
+        {(showPhone || showMonitor) && (
+          <span className="flex gap-[2px] items-center" title={iconTooltip(showPhone, showMonitor)}>
+            {showPhone && <Phone />}
+            {showMonitor && <Monitor />}
+          </span>
+        )}
       </div>
       <span className="font-['SF_Pro:Light',sans-serif] font-light text-[13px] text-[#535353]">{value}</span>
     </div>
@@ -387,8 +397,12 @@ function HierarchicalDetailRow({ item, depth = 0 }: { item: DetailItem; depth?: 
       <div className={`flex items-center justify-between py-2.5 ${paddingClass}`}>
         <div className="flex items-center gap-2">
           <span className="font-['SF_Pro:Light',sans-serif] font-light text-[13px] text-[#535353]">{item.label}</span>
-          {showPhone && <Phone />}
-          {showMonitor && <Monitor />}
+          {(showPhone || showMonitor) && (
+            <span className="flex gap-[2px] items-center" title={iconTooltip(showPhone, showMonitor)}>
+              {showPhone && <Phone />}
+              {showMonitor && <Monitor />}
+            </span>
+          )}
         </div>
         <span className="font-['SF_Pro:Light',sans-serif] font-light text-[13px] text-[#535353]">{item.value}</span>
       </div>
