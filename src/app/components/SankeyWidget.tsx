@@ -1533,8 +1533,9 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
 
           // Branch ref: % of inbound or outbound ancestor
           const branchId = getTopLevelAncestor(node.id, activeData.links);
+          const parentId = incomingLinks[0]?.source;
           let branchRef: { label: string; percentage: number } | undefined;
-          if (branchId) {
+          if (branchId && branchId !== parentId) {
             const branchNode = nodesDataRef.current.find(n => n.id === branchId);
             const branchNodeData = activeData.nodes.find(n => n.id === branchId);
             if (branchNode && branchNodeData && branchNode.value > 0) {

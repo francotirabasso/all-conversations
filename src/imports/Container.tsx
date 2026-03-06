@@ -287,12 +287,12 @@ function PercentageRefsSection({ parentRef, branchRef }: RefProps) {
     <div className="w-full border-b border-[rgba(28,28,28,0.1)] px-[16px] py-[12px] flex flex-col gap-[6px]">
       {parentRef && (
         <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.4] text-[#535353] text-[12px]">
-          {parentRef.percentage.toFixed(0)}% of {parentRef.label}
+          {parentRef.percentage.toFixed(0)}% of all {parentRef.label}
         </p>
       )}
       {branchRef && (
         <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.4] text-[#535353] text-[12px]">
-          {branchRef.percentage.toFixed(0)}% of {branchRef.label}
+          {branchRef.percentage.toFixed(0)}% of all {branchRef.label}
         </p>
       )}
     </div>
