@@ -20,20 +20,20 @@ const WIDGET_TYPES = [
 ];
 
 const AVAILABLE_WIDGETS = [
-  { id: 'avg-answer-time', name: 'Avg. answer time', type: 'metric' },
-  { id: 'avg-first-response', name: 'Avg. first response time', type: 'metric' },
-  { id: 'avg-handle-time', name: 'Avg. handle time', type: 'metric' },
-  { id: 'deflection-rate', name: 'Deflection rate', type: 'metric' },
-  { id: 'conversation-volume-time', name: 'Conversation volume over time', type: 'line' },
-  { id: 'ai-agent-answers', name: 'AI agent answers', type: 'line' },
-  { id: 'ai-agent-feedback', name: 'AI agent answers feedback', type: 'line' },
-  { id: 'ai-agent-queries', name: 'AI Agent queries', type: 'line' },
-  { id: 'peak-queue', name: 'Peak queue size', type: 'line' },
-  { id: 'sessions-channel', name: 'Sessions by channel', type: 'line' },
-  { id: 'top-dispositions', name: 'Top dispositions', type: 'line' },
-  { id: 'weekly-average', name: 'Weekly average volume', type: 'heatmap' },
-  { id: 'conversation-breakdown', name: 'Conversation volume breakdown', type: 'sankey' },
-  { id: 'leaderboard', name: 'Leaderboard', type: 'table' },
+  { id: 'avg-answer-time', name: 'Avg. answer time', type: 'metric', size: [2, 1] as [number, number], description: 'Average time taken to answer incoming conversations' },
+  { id: 'avg-first-response', name: 'Avg. first response time', type: 'metric', size: [2, 1] as [number, number], description: 'Average time until the first response is sent to a customer' },
+  { id: 'avg-handle-time', name: 'Avg. handle time', type: 'metric', size: [2, 1] as [number, number], description: 'Average time spent handling each conversation from start to resolution' },
+  { id: 'deflection-rate', name: 'Deflection rate', type: 'metric', size: [2, 1] as [number, number], description: 'Percentage of conversations resolved without agent intervention' },
+  { id: 'conversation-volume-time', name: 'Conversation volume over time', type: 'line', size: [3, 2] as [number, number], description: 'Total conversation volume trends over the selected time period' },
+  { id: 'ai-agent-answers', name: 'AI agent answers', type: 'line', size: [3, 2] as [number, number], description: 'Number of conversations successfully handled and resolved by the AI agent' },
+  { id: 'ai-agent-feedback', name: 'AI agent answers feedback', type: 'line', size: [3, 2] as [number, number], description: 'Breakdown of positive and negative feedback received on AI agent responses' },
+  { id: 'ai-agent-queries', name: 'AI Agent queries', type: 'line', size: [3, 2] as [number, number], description: 'Volume of queries submitted to the AI agent over the selected time period' },
+  { id: 'peak-queue', name: 'Peak queue size', type: 'line', size: [3, 2] as [number, number], description: 'Maximum number of conversations waiting in queue at any given time' },
+  { id: 'sessions-channel', name: 'Sessions by channel', type: 'line', size: [3, 2] as [number, number], description: 'Distribution of conversation sessions across different communication channels' },
+  { id: 'top-dispositions', name: 'Top dispositions', type: 'line', size: [3, 2] as [number, number], description: 'Most frequently used conversation outcome tags over the selected time period' },
+  { id: 'weekly-average', name: 'Weekly average volume', type: 'heatmap', size: [4, 2] as [number, number], description: 'Weekly average conversation volume across different times of day' },
+  { id: 'conversation-breakdown', name: 'Conversation volume breakdown', type: 'sankey', size: [6, 2] as [number, number], description: 'Conversation flow showing how conversations move through different stages from start to finish' },
+  { id: 'leaderboard', name: 'Leaderboard', type: 'table', size: [6, 4] as [number, number], description: 'Agent performance ranking based on key metrics such as handle time and resolution rate' },
 ];
 
 // Library widget item component with drag support
@@ -41,12 +41,41 @@ interface LibraryWidgetItemProps {
   widgetId: string;
   widgetType: string;
   name: string;
-  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  description: string;
+  size: [number, number];
   onClickAdd: () => void;
   onDragStart?: () => void;
 }
 
-function LibraryWidgetItem({ widgetId, widgetType, name, Icon, onClickAdd, onDragStart }: LibraryWidgetItemProps) {
+function WidgetSizeGrid({ cols, rows }: { cols: number; rows: number }) {
+  const GRID_COLS = 6;
+  const GRID_ROWS = 4;
+  return (
+    <div
+      className="shrink-0 grid gap-[2px]"
+      style={{ gridTemplateColumns: `repeat(${GRID_COLS}, 6px)` }}
+    >
+      {Array.from({ length: GRID_ROWS }).map((_, row) =>
+        Array.from({ length: GRID_COLS }).map((_, col) => {
+          const active = col < cols && row < rows;
+          return (
+            <div
+              key={`${row}-${col}`}
+              className="rounded-[1px]"
+              style={{
+                width: 6,
+                height: 6,
+                backgroundColor: active ? '#6EA6E2' : '#E5E7EB',
+              }}
+            />
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function LibraryWidgetItem({ widgetId, widgetType, name, description, size, onClickAdd, onDragStart }: LibraryWidgetItemProps) {
   // Only make implemented widgets draggable
   // Note: These IDs must match AVAILABLE_WIDGETS IDs, not the internal implementation IDs
   const IMPLEMENTED_WIDGETS = new Set([
@@ -86,22 +115,29 @@ function LibraryWidgetItem({ widgetId, widgetType, name, Icon, onClickAdd, onDra
       ref={isDraggableWidget ? setNodeRef : undefined}
       {...(isDraggableWidget ? listeners : {})}
       {...(isDraggableWidget ? attributes : {})}
-      className={`group flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+      className={`group flex items-center gap-6 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
         isDraggableWidget ? 'cursor-grab active:cursor-grabbing' : ''
       } ${isDragging ? 'opacity-50' : ''}`}
     >
-      <Icon className="size-4 shrink-0" style={{ color: '#6EA6E2' }} />
-      <span className="text-sm font-normal text-gray-700 flex-1">{name}</span>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm font-normal text-gray-700">{name}</span>
+        <p className="text-xs text-gray-400 mt-0.5 leading-snug">{description}</p>
+      </div>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onClickAdd();
-        }}
-        className="opacity-0 group-hover:opacity-100 transition-opacity px-2 py-1 text-xs text-[#7C52FF] hover:text-[#6B45E6] bg-transparent rounded cursor-pointer"
-      >
-        Add widget
-      </button>
+      <div className="relative shrink-0">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClickAdd();
+          }}
+          className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center px-2 py-1 text-xs font-medium text-[#7C52FF] bg-white rounded cursor-pointer whitespace-nowrap border border-[#7C52FF]/30 hover:bg-[#7C52FF] hover:text-white hover:border-[#7C52FF]"
+        >
+          Add
+        </button>
+        <div className="absolute inset-0 flex items-center justify-center group-hover:opacity-0 transition-opacity pointer-events-none">
+          <WidgetSizeGrid cols={size[0]} rows={size[1]} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -699,7 +735,6 @@ function Label() {
 
 function Button1({ onAddWidget }: { onAddWidget: (widgetId: string, widgetType: string) => void }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState<string>('all');
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -714,12 +749,12 @@ function Button1({ onAddWidget }: { onAddWidget: (widgetId: string, widgetType: 
 
       <Popover.Portal>
         <Popover.Content
-          className="bg-white rounded-lg shadow-xl border border-gray-200 w-[320px] z-[100] flex flex-col max-h-[600px]"
+          className="bg-white rounded-lg shadow-xl border border-gray-200 w-[400px] z-[100] flex flex-col max-h-[600px] overflow-x-hidden"
           sideOffset={8}
           align="end"
         >
-          {/* Header with search and filter */}
-          <div className="p-3 border-b border-gray-200 space-y-2">
+          {/* Header with search */}
+          <div className="p-3 border-b border-gray-200">
             <input
               type="text"
               placeholder="Search widgets"
@@ -727,49 +762,27 @@ function Button1({ onAddWidget }: { onAddWidget: (widgetId: string, widgetType: 
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)]"
             />
-            
-            <div className="relative">
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(23,104,198)] appearance-none bg-white pr-8"
-              >
-                <option value="all">Type</option>
-                {WIDGET_TYPES.map(type => (
-                  <option key={type.id} value={type.id}>{type.label}</option>
-                ))}
-              </select>
-              <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 size-4 text-gray-500 pointer-events-none" />
-            </div>
           </div>
 
           {/* Widget list */}
           <div className="overflow-y-auto flex-1">
             {AVAILABLE_WIDGETS
-              .filter(widget => {
-                const matchesSearch = widget.name.toLowerCase().includes(searchQuery.toLowerCase());
-                const matchesType = selectedType === 'all' || widget.type === selectedType;
-                return matchesSearch && matchesType;
-              })
-              .map(widget => {
-                const typeConfig = WIDGET_TYPES.find(t => t.id === widget.type);
-                const Icon = typeConfig?.icon || RectangleHorizontal;
-
-                return (
-                  <LibraryWidgetItem
-                    key={widget.id}
-                    widgetId={widget.id}
-                    widgetType={widget.type}
-                    name={widget.name}
-                    Icon={Icon}
-                    onClickAdd={() => {
-                      onAddWidget(widget.id, widget.type);
-                      setIsOpen(false);
-                    }}
-                    onDragStart={() => setIsOpen(false)}
-                  />
-                );
-              })}
+              .filter(widget => widget.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map(widget => (
+                <LibraryWidgetItem
+                  key={widget.id}
+                  widgetId={widget.id}
+                  widgetType={widget.type}
+                  name={widget.name}
+                  description={widget.description}
+                  size={widget.size}
+                  onClickAdd={() => {
+                    onAddWidget(widget.id, widget.type);
+                    setIsOpen(false);
+                  }}
+                  onDragStart={() => setIsOpen(false)}
+                />
+              ))}
           </div>
 
           <Popover.Arrow className="fill-white" />
