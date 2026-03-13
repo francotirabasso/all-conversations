@@ -22,8 +22,11 @@ interface ContainerProps {
   details?: DetailItem[];
   showChart?: boolean;
   iconType?: 'both' | 'phone-only' | 'monitor-only';
+  rootRef?: { label: string; percentage: number };
   parentRef?: { label: string; percentage: number };
   branchRef?: { label: string; percentage: number };
+  definition?: string;
+  definitionScope?: 'Both' | 'Voice' | 'Digital';
 }
 
 function Close() {
@@ -248,7 +251,7 @@ function PhoneIconLarge() {
   );
 }
 
-type RefProps = { parentRef?: { label: string; percentage: number }; branchRef?: { label: string; percentage: number } };
+type RefProps = { rootRef?: { label: string; percentage: number }; parentRef?: { label: string; percentage: number }; branchRef?: { label: string; percentage: number } };
 
 function StatisticsContainer1({ nodeName, percentage, value, showChart = true, iconType }: { nodeName: string; percentage: number; value: number; showChart?: boolean; iconType?: 'both' | 'phone-only' | 'monitor-only' }) {
   return (
@@ -281,18 +284,23 @@ function Header({ nodeName, percentage, value, showChart = true, iconType }: { n
   );
 }
 
-function PercentageRefsSection({ parentRef, branchRef }: RefProps) {
-  if (!parentRef && !branchRef) return null;
+function PercentageRefsSection({ rootRef, parentRef, branchRef }: RefProps) {
+  if (!rootRef && !parentRef && !branchRef) return null;
   return (
     <div className="w-full border-b border-[rgba(28,28,28,0.1)] px-[16px] py-[12px] flex flex-col gap-[6px]">
-      {parentRef && (
+      {rootRef && (
         <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.4] text-[#535353] text-[12px]">
-          {parentRef.percentage.toFixed(0)}% of all {parentRef.label}
+          {rootRef.percentage.toFixed(0)}% of all {rootRef.label}
         </p>
       )}
       {branchRef && (
         <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.4] text-[#535353] text-[12px]">
           {branchRef.percentage.toFixed(0)}% of all {branchRef.label}
+        </p>
+      )}
+      {parentRef && (
+        <p className="font-['SF_Pro:Regular',sans-serif] font-normal leading-[1.4] text-[#535353] text-[12px]">
+          {parentRef.percentage.toFixed(0)}% of all {parentRef.label}
         </p>
       )}
     </div>
@@ -334,8 +342,31 @@ function DetailRow({ label, value, icon }: { label: string; value: number; icon?
   );
 }
 
-function TabsContent({ tabs }: { tabs: TabData[] }) {
+function DefinitionContent({ definition }: { definition: string; scope?: 'Both' | 'Voice' | 'Digital' }) {
+  return (
+    <div className="px-4 py-3">
+      <p className="font-['SF_Pro:Regular',sans-serif] text-[13px] text-[#3a3a3a] leading-[1.4]">
+        {definition}
+      </p>
+    </div>
+  );
+}
+
+function DefinitionSection({ definition }: { definition: string }) {
+  return (
+    <div className="w-full border-t border-[rgba(28,28,28,0.1)]">
+      <div className="px-4 pt-3 pb-0">
+        <p className="font-['SF_Pro:Regular',sans-serif] font-medium text-[12px] text-[#535353]">Definition</p>
+      </div>
+      <DefinitionContent definition={definition} />
+    </div>
+  );
+}
+
+function TabsContent({ tabs, definition }: { tabs: TabData[]; definition?: string }) {
   const [activeTab, setActiveTab] = useState(0);
+  const hasDefinition = !!definition;
+  const isDefinitionTab = hasDefinition && activeTab === tabs.length;
 
   return (
     <div className="w-full">
@@ -349,40 +380,51 @@ function TabsContent({ tabs }: { tabs: TabData[] }) {
             onClick={() => setActiveTab(index)}
           />
         ))}
+        {hasDefinition && (
+          <TabButton
+            label="Definition"
+            isActive={isDefinitionTab}
+            onClick={() => setActiveTab(tabs.length)}
+          />
+        )}
       </div>
 
-      {/* Tab Content with custom scrollbar */}
-      <div 
-        className="max-h-[300px] overflow-y-auto"
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#D1D5DB #F3F4F6'
-        }}
-      >
-        <style>{`
-          .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar {
-            width: 8px;
-          }
-          .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar-track {
-            background: #F3F4F6;
-          }
-          .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar-thumb {
-            background: #D1D5DB;
-            border-radius: 4px;
-          }
-          .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar-thumb:hover {
-            background: #9CA3AF;
-          }
-        `}</style>
-        {tabs[activeTab].items.map((item, index) => (
-          <DetailRow
-            key={index}
-            label={item.label}
-            value={item.value}
-            icon={item.icon}
-          />
-        ))}
-      </div>
+      {/* Tab Content */}
+      {isDefinitionTab ? (
+        <DefinitionContent definition={definition!} />
+      ) : (
+        <div
+          className="max-h-[300px] overflow-y-auto"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#D1D5DB #F3F4F6'
+          }}
+        >
+          <style>{`
+            .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar {
+              width: 8px;
+            }
+            .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar-track {
+              background: #F3F4F6;
+            }
+            .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar-thumb {
+              background: #D1D5DB;
+              border-radius: 4px;
+            }
+            .max-h-\\\\\\\\[300px\\\\\\\\]::-webkit-scrollbar-thumb:hover {
+              background: #9CA3AF;
+            }
+          `}</style>
+          {tabs[activeTab].items.map((item, index) => (
+            <DetailRow
+              key={index}
+              label={item.label}
+              value={item.value}
+              icon={item.icon}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -477,14 +519,20 @@ function Footer() {
   );
 }
 
-export default function Container({ nodeName, percentage, value, tabs, details, showChart, iconType, parentRef, branchRef }: ContainerProps) {
+export default function Container({ nodeName, percentage, value, tabs, details, showChart, iconType, rootRef, parentRef, branchRef, definition, definitionScope }: ContainerProps) {
   return (
     <div className="bg-[#f9f9f9] content-stretch flex flex-col items-start relative rounded-[12px] w-[320px] shadow-[0_4px_16px_rgba(0,0,0,0.08)]" data-name="Container">
       <div aria-hidden="true" className="absolute border-[rgba(28,28,28,0.17)] border-solid border inset-0 pointer-events-none rounded-[12px]" />
       <Header nodeName={nodeName} percentage={percentage} value={value} showChart={showChart} iconType={iconType} />
-      <PercentageRefsSection parentRef={parentRef} branchRef={branchRef} />
-      {tabs && tabs.length > 0 && <TabsContent tabs={tabs} />}
-      {details && details.length > 0 && <DetailsContent details={details} />}
+      <PercentageRefsSection rootRef={rootRef} parentRef={parentRef} branchRef={branchRef} />
+      {tabs && tabs.length > 0 ? (
+        <TabsContent tabs={tabs} definition={definition} />
+      ) : (
+        <>
+          {details && details.length > 0 && <DetailsContent details={details} />}
+          {definition && <DefinitionSection definition={definition} />}
+        </>
+      )}
       <Footer />
     </div>
   );

@@ -607,9 +607,8 @@ function filterDataByExpanded(data: SankeyData, expandedNodes: Set<string>, maxD
     
     visibleNodes.add(nodeId);
     
-    // For levels 0-1, always expand (first 2 levels)
-    // For levels 2+, only expand if in expandedNodes set
-    const shouldExpand = level <= 1 || expandedNodes.has(nodeId);
+    // Root (level 0) always expands; level 1+ only expands if in expandedNodes set
+    const shouldExpand = level === 0 || expandedNodes.has(nodeId);
     
     if (shouldExpand || !hasChildren(data, nodeId)) {
       const children = getNodeChildren(data, nodeId);
@@ -763,11 +762,47 @@ function drawChevron(ctx: CanvasRenderingContext2D, x: number, y: number, size: 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
-  const icon = direction === 'right' ? '>' : 'v';
+  const icon = direction === 'right' ? '+' : '−';
   ctx.fillText(icon, x, y);
   
   ctx.restore();
 }
+
+const SANKEY_NODE_DEFINITIONS: Record<string, { definition: string; scope: 'Both' | 'Voice' | 'Digital' }> = {
+  conversations_b:       { definition: 'Total volume of all inbound and outbound conversations across voice and digital channels.', scope: 'Both' },
+  inbound:               { definition: 'Conversations initiated by customers through any voice or digital channel.', scope: 'Both' },
+  answered_b:            { definition: 'Inbound conversations that were successfully connected to an agent or AI.', scope: 'Both' },
+  conv_ai_d:             { definition: 'Digital conversations handled end-to-end by the AI agent without human intervention.', scope: 'Digital' },
+  conv_human_b:          { definition: 'Answered conversations routed to and handled by a live human agent.', scope: 'Both' },
+  callback_req_v:        { definition: 'Voice calls where the customer opted to receive a callback instead of waiting in queue.', scope: 'Voice' },
+  unanswered_b:          { definition: 'Inbound conversations that were not connected to any agent or AI.', scope: 'Both' },
+  missed:                { definition: 'Unanswered voice calls that rang but were not picked up by any agent.', scope: 'Voice' },
+  missed_voicemails:     { definition: 'Missed voice calls where the customer chose to leave a voicemail.', scope: 'Voice' },
+  queue_timeout:         { definition: 'Conversations that ended because the maximum queue wait time was exceeded.', scope: 'Both' },
+  agent_closed:          { definition: 'Conversations closed by the agent before being answered or during queue.', scope: 'Both' },
+  agent_timeout:         { definition: 'Conversations ended because the agent did not respond within the allowed time.', scope: 'Both' },
+  other_missed:          { definition: 'Missed voice calls where the customer did not leave a voicemail.', scope: 'Voice' },
+  abandoned:             { definition: 'Inbound conversations where the customer disconnected before being connected to an agent.', scope: 'Both' },
+  abandoned_queue_b:     { definition: 'Conversations abandoned while the customer was waiting in the queue.', scope: 'Both' },
+  abandoned_rang_v:      { definition: 'Voice calls abandoned after ringing but before the agent answered.', scope: 'Voice' },
+  unanswered_transferred_v: { definition: 'Voice calls transferred to another queue that were not answered.', scope: 'Voice' },
+  call_messages:         { definition: 'Voice conversations where the customer left a recorded message instead of waiting.', scope: 'Voice' },
+  other_voicemails:      { definition: 'Voicemails received outside of the standard missed call flow.', scope: 'Voice' },
+  spam_calls:            { definition: 'Inbound voice calls identified as spam and automatically filtered out.', scope: 'Voice' },
+  outbound:              { definition: 'Conversations initiated by agents toward customers across voice and digital channels.', scope: 'Both' },
+  initiated:             { definition: 'Outbound calls successfully placed by agents.', scope: 'Voice' },
+  connected:             { definition: 'Outbound calls where a live connection with the customer was established.', scope: 'Voice' },
+  cancelled:             { definition: 'Outbound calls that were cancelled before a connection was made.', scope: 'Voice' },
+  digital_conversations: { definition: 'Outbound conversations sent through digital channels such as chat or messaging.', scope: 'Digital' },
+  agent_cancelled:       { definition: 'Outbound calls cancelled by the agent before the customer answered.', scope: 'Voice' },
+  system_timeout_cancel: { definition: 'Outbound calls cancelled automatically due to system timeout or other system-triggered reasons.', scope: 'Voice' },
+  customer_declined:     { definition: 'Outbound calls rejected or not answered by the customer.', scope: 'Voice' },
+  callback_attempts:     { definition: 'Outbound call attempts made as part of fulfilling a customer callback request.', scope: 'Voice' },
+  successful_callbacks:  { definition: 'Callback attempts where a live connection with the customer was successfully established.', scope: 'Voice' },
+  unsuccessful_callbacks:{ definition: 'Callback attempts that failed to connect with the customer after all retries.', scope: 'Voice' },
+  missed_by_customer_v:  { definition: 'Outbound voice calls that rang but were not answered by the customer.', scope: 'Voice' },
+  missed_by_cc_v:        { definition: 'Callback calls missed by the contact center when the customer returned the call.', scope: 'Voice' },
+};
 
 export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = false, isDraggable = false }: { onMaximize?: () => void; onRemove?: () => void; onDuplicate?: () => void; minimal?: boolean; isDraggable?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -784,6 +819,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     value: number;
     percentage: number;
     position: { x: number; y: number };
+    rootRef?: { label: string; percentage: number };
     parentRef?: { label: string; percentage: number };
     branchRef?: { label: string; percentage: number };
   } | null>(null);
@@ -840,7 +876,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   const allExpandableNodes = useMemo(() => {
     const levels = calculateNodeLevels(activeData);
     return activeData.nodes
-      .filter(n => (levels.get(n.id) ?? 0) >= 2 && hasChildren(activeData, n.id))
+      .filter(n => (levels.get(n.id) ?? 0) >= 1 && hasChildren(activeData, n.id))
       .map(n => n.id);
   }, [activeData]);
 
@@ -862,6 +898,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
   const leafHoverZonesRef = useRef<Array<{ nodeId: string; x0: number; x1: number; y0: number; y1: number }>>([]);
   // True when hoveredNode was triggered by a leaf zone (not the node bar itself) — keeps cursor as 'grab'
   const isLeafZoneHoveredRef = useRef(false);
+  const [isCollapsibleLabelHovered, setIsCollapsibleLabelHovered] = useState(false);
 
   // Calculate optimal popover position to keep it visible
   const calculatePopoverPosition = (clickX: number, clickY: number, hasContent: boolean, hasChart: boolean) => {
@@ -1414,7 +1451,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       const nodeLevel = nodeLevels.get(node.id) || 0;
       const nodeHasChildren = hasChildren(activeData, node.id);
       const isExpanded = expandedNodes.has(node.id);
-      const canCollapse = nodeLevel >= 2 && nodeHasChildren;
+      const canCollapse = nodeLevel >= 1 && nodeHasChildren;
       
       // Draw label
       ctx.fillStyle = COLORS.text;
@@ -1422,7 +1459,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       ctx.fillText(node.name, x, y);
-      
+
       // Draw chevron if collapsible (aligned with label)
       if (canCollapse) {
         const textWidth = ctx.measureText(node.name).width;
@@ -1431,9 +1468,12 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         drawChevron(ctx, chevronX, chevronY, LAYOUT.chevronSize, isExpanded ? 'down' : 'right');
       }
       
-      // Draw value and percentage (same logic as the Figma plugin)
+      // Draw value and percentage (root-relative)
       const formattedValue = (node.value || 0).toLocaleString();
-      const percentageText = `${(node.percentage ?? 100).toFixed(1)}%`;
+      const rootNodes = nodesDataRef.current.filter(n => !activeData.links.some(l => l.target === n.id));
+      const rootValue = rootNodes.reduce((sum, n) => sum + (n.value ?? 0), 0);
+      const pctOfRoot = rootValue > 0 ? (node.value / rootValue) * 100 : (node.percentage ?? 100);
+      const percentageText = `${pctOfRoot.toFixed(1)}%`;
       
       // Check if this node's stats are being hovered
       const isStatsHovered = hoveredNodeStats === node.id;
@@ -1532,6 +1572,15 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
           const hasChart = !['unanswered_transferred_v', 'other_voicemails', 'call_messages', 'spam_calls', 'missed_by_customer_v', 'missed_by_cc_v', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v', 'digital_conversations', 'cancelled', 'successful_callbacks', 'unsuccessful_callbacks', 'callback_attempts', 'customer_declined', 'agent_cancelled', 'connected', 'system_timeout_cancel'].includes(node.id);
           const position = calculatePopoverPosition(e.clientX, e.clientY, hasContent, hasChart);
 
+          // Root ref: % of level-0 root
+          const rootNodesForRef = nodesDataRef.current.filter(n => !activeData.links.some(l => l.target === n.id));
+          const rootValueForRef = rootNodesForRef.reduce((sum, n) => sum + (n.value ?? 0), 0);
+          const rootNodeData = activeData.nodes.find(n => rootNodesForRef.some(r => r.id === n.id));
+          let rootRef: { label: string; percentage: number } | undefined;
+          if (rootNodeData && rootValueForRef > 0 && rootNodesForRef.every(r => r.id !== node.id)) {
+            rootRef = { label: rootNodeData.label, percentage: (node.value / rootValueForRef) * 100 };
+          }
+
           // Parent ref: % of direct parent
           const incomingLinks = activeData.links.filter(l => l.target === node.id);
           let parentRef: { label: string; percentage: number } | undefined;
@@ -1564,6 +1613,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
             value: node.value,
             percentage: node.percentage,
             position,
+            rootRef,
             parentRef,
             branchRef,
           });
@@ -1575,7 +1625,7 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     // Check if clicked on label+chevron area OR node bar (for expand/collapse)
     for (const node of nodesDataRef.current) {
       const nodeLevel = nodeLevels.get(node.id) || 0;
-      const canCollapse = nodeLevel >= 2 && hasChildren(activeData, node.id);
+      const canCollapse = nodeLevel >= 1 && hasChildren(activeData, node.id);
 
       if (canCollapse) {
         // Check click on node bar
@@ -1700,6 +1750,33 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
     setHoveredNode(foundNode);
     setHoveredNodeStats(foundNodeStats);
     setHoveredLink(foundLink);
+
+    // Detect hover over collapsible label+chevron areas (for pointer cursor)
+    const canvas3 = canvasRef.current;
+    if (canvas3) {
+      const ctx3 = canvas3.getContext('2d');
+      if (ctx3) {
+        ctx3.font = '11px SF Pro, sans-serif';
+        const nodeLevels = calculateNodeLevels(activeData);
+        let collapsibleHover = false;
+        for (const node of nodesDataRef.current) {
+          const level = nodeLevels.get(node.id) || 0;
+          if (level < 1 || !hasChildren(activeData, node.id)) continue;
+          const labelX = node.x1 + LAYOUT.labelOffset;
+          const nodeHeight = node.y1 - node.y0;
+          const labelY = node.y0 + Math.max(0, (nodeHeight - 34) / 2);
+          const textWidth = ctx3.measureText(node.name).width;
+          const clickableWidth = textWidth + 6 + LAYOUT.chevronSize;
+          if (adjustedX >= labelX && adjustedX <= labelX + clickableWidth &&
+              adjustedY >= labelY && adjustedY <= labelY + 14) {
+            collapsibleHover = true;
+            break;
+          }
+        }
+        setIsCollapsibleLabelHovered(collapsibleHover);
+      }
+    }
+
   };
 
   useEffect(() => {
@@ -1853,111 +1930,25 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
         <canvas 
           ref={canvasRef}
           className="w-full h-full block"
-          style={{ cursor: isPanningRef.current ? 'grabbing' : ((hoveredNode && !isLeafZoneHoveredRef.current) || hoveredNodeStats ? 'pointer' : 'grab') }}
+          style={{ cursor: isPanningRef.current ? 'grabbing' : ((hoveredNode && !isLeafZoneHoveredRef.current) || hoveredNodeStats || isCollapsibleLabelHovered ? 'pointer' : 'grab') }}
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onMouseMove={handleCanvasMove}
           onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onMouseLeave={(e) => { handleMouseUp(e); }}
           onClick={handleCanvasClick}
         />
         
-        {/* Controls row: metric selector + theme + collapse + zoom */}
+        {/* Controls row: collapse + zoom */}
         <div className={`absolute bottom-2 right-2 flex flex-row items-center gap-2 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-
-          {/* Metric Selector Dropdown */}
-          <div className="relative">
-            <div className="flex flex-row items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1">
-              <button
-                onClick={() => setMetricOpen(o => !o)}
-                className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
-                title="First level"
-              >
-                <span className="text-[12px] font-medium text-gray-700 leading-none">
-                  {activeData.nodes.find(n => n.id === selectedMetric)?.label ?? 'Conversations'}
-                </span>
-                <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${metricOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-
-            {metricOpen && (
-              <div className="absolute bottom-full mb-1 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]">
-                {metricOptions.map((group, gi) => (
-                  <React.Fragment key={group.level}>
-                    {gi > 0 && <div className="h-px bg-gray-100 my-1" />}
-                    {group.nodes.map(node => (
-                      <button
-                        key={node.id}
-                        onClick={() => { setSelectedMetric(node.id); setMetricOpen(false); }}
-                        className={`w-full text-left py-1.5 text-[11px] transition-colors hover:bg-gray-100 ${
-                          selectedMetric === node.id ? 'text-gray-900 bg-gray-50 font-medium' : 'text-gray-600'
-                        }`}
-                        style={{ paddingLeft: '12px', paddingRight: '12px' }}
-                      >
-                        {node.label}
-                      </button>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Color Theme Dropdown */}
-          <div className="relative" ref={themeRef}>
-            <div className="flex flex-row items-center bg-white rounded-lg shadow-lg border border-gray-200 p-1">
-              <button
-                onClick={() => setThemeOpen(o => !o)}
-                className="flex flex-row items-center gap-1 px-2 h-8 hover:bg-gray-100 rounded transition-colors"
-                title="Color theme"
-              >
-                {/* Dot indicator */}
-                {THEMES[selectedTheme].dot === 'rainbow' ? (
-                  <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(#FC5EA0 0deg 120deg, #4AA9EA 120deg 240deg, #52C926 240deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
-                ) : THEMES[selectedTheme].dot === 'blue-grey' ? (
-                  <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(from -45deg, #6EA6E2 0deg 180deg, #F3F4F6 180deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
-                ) : (
-                  <span className="w-3 h-3 rounded shrink-0" style={{ background: THEMES[selectedTheme].dot, border: '1px solid rgba(0,0,0,0.12)' }} />
-                )}
-                <ChevronDown className={`w-3 h-3 text-gray-500 transition-transform ${themeOpen ? 'rotate-180' : ''}`} />
-              </button>
-            </div>
-
-            {themeOpen && (
-              <div className="absolute bottom-full mb-1 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]">
-                {(Object.entries(THEMES) as [ThemeId, typeof THEMES[ThemeId]][]).map(([id, theme]) => (
-                  <button
-                    key={id}
-                    onClick={() => { setSelectedTheme(id); setThemeOpen(false); }}
-                    className={`w-full text-left px-3 py-1.5 text-[11px] transition-colors hover:bg-gray-100 flex items-center gap-2 ${
-                      selectedTheme === id ? 'text-gray-900 bg-gray-50 font-medium' : 'text-gray-600'
-                    }`}
-                  >
-                    {theme.dot === 'rainbow' ? (
-                      <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(#FC5EA0 0deg 120deg, #4AA9EA 120deg 240deg, #52C926 240deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
-                    ) : theme.dot === 'blue-grey' ? (
-                      <span className="w-3 h-3 rounded shrink-0" style={{ background: 'conic-gradient(from -45deg, #6EA6E2 0deg 180deg, #F3F4F6 180deg 360deg)', border: '1px solid rgba(0,0,0,0.12)' }} />
-                    ) : (
-                      <span className="w-3 h-3 rounded shrink-0" style={{ background: theme.dot, border: '1px solid rgba(0,0,0,0.12)' }} />
-                    )}
-                    {theme.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
 
           {/* Collapse / Expand all */}
           <div className="flex flex-row gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1">
             <button
               onClick={handleToggleAllExpanded}
-              className="p-2 hover:bg-gray-100 rounded transition-colors"
-              title={allExpanded ? 'Collapse all' : 'Expand all'}
+              className="px-3 h-8 text-[12px] font-medium text-gray-700 hover:bg-gray-100 rounded transition-colors whitespace-nowrap"
             >
-              {allExpanded
-                ? <FoldHorizontal className="w-4 h-4 text-gray-700" />
-                : <UnfoldHorizontal className="w-4 h-4 text-gray-700" />
-              }
+              {allExpanded ? 'Collapse all' : 'Expand all'}
             </button>
           </div>
 
@@ -1999,10 +1990,13 @@ export function SankeyWidget({ onMaximize, onRemove, onDuplicate, minimal = fals
               nodeName={selectedNodeForDetails.nodeName}
               percentage={selectedNodeForDetails.percentage}
               value={selectedNodeForDetails.value}
+              rootRef={selectedNodeForDetails.rootRef}
               parentRef={selectedNodeForDetails.parentRef}
               branchRef={selectedNodeForDetails.branchRef}
               tabs={getNodeTabData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
               details={getNodeDetailData(selectedNodeForDetails.nodeId, selectedNodeForDetails.value)}
+              definition={SANKEY_NODE_DEFINITIONS[selectedNodeForDetails.nodeId]?.definition}
+              definitionScope={SANKEY_NODE_DEFINITIONS[selectedNodeForDetails.nodeId]?.scope}
               showChart={!['call_messages', 'spam_calls', 'missed_voicemails', 'other_missed', 'conv_ai_d', 'callback_req_v', 'unanswered_transferred_v', 'queue_timeout', 'agent_closed', 'agent_timeout', 'abandoned_rang_v', 'digital_conversations', 'cancelled', 'successful_callbacks', 'unsuccessful_callbacks', 'callback_attempts', 'customer_declined', 'agent_cancelled', 'connected', 'missed_by_customer_v', 'missed_by_cc_v', 'system_timeout_cancel', 'other_voicemails'].includes(selectedNodeForDetails.nodeId)}
               iconType={
                 ['conv_ai_d', 'queue_timeout', 'agent_closed', 'agent_timeout', 'digital_conversations'].includes(selectedNodeForDetails.nodeId) ? 'monitor-only' :
